@@ -10,7 +10,7 @@ import {
 } from './text.js';
 import {
   UNIVERSITIES, DEPARTMENTS, CITIES, FIRST_NAMES, SURNAMES, COMMON_WORDS, TITLES, FACULTIES,
-  EMAIL_DOMAINS, INSTITUTION_WORDS, DEPARTMENT_WORDS, ADDRESS_WORDS, FACULTY_WORDS, parseList, words,
+  EMAIL_DOMAINS, INSTITUTION_WORDS, DEPARTMENT_WORDS, ADDRESS_WORDS, FACULTY_WORDS, CITY_ALIASES, MONTHS, parseList, words,
 } from './dictionaries.js';
 
 // ---------- Sözlükleri hazırlama ----------
@@ -30,10 +30,12 @@ const deptList = parseList(DEPARTMENTS);
 const abbrKey = (a) => trUpper(a).replace(/[\s.]/g, '');
 function buildLookup(list) {
   const names = new Map();
+  const vocab = new Map(); // sözlükteki tüm kelimeler: kelime düzeyinde harf hatası düzeltmek için
   const abbrs = new Map();
   const foldedAbbrs = new Map();
   for (const { name, abbr } of list) {
     names.set(fold(name), name);
+    for (const w of fold(name).split(' ')) if (w.length > 3) vocab.set(w, w);
     for (const a of abbr) {
       if (a.length > 5) names.set(fold(a), name); // uzun eş anlamlılar harf hatasıyla da bulunabilsin
       abbrs.set(abbrKey(a), name);
@@ -41,7 +43,7 @@ function buildLookup(list) {
       foldedAbbrs.set(k, foldedAbbrs.has(k) && foldedAbbrs.get(k) !== name ? null : name);
     }
   }
-  return { names, abbrs, foldedAbbrs };
+  return { names, abbrs, foldedAbbrs, vocab };
 }
 
 const UNI = buildLookup(uniList);
@@ -122,11 +124,16 @@ function lookup(text, table, expansions, extraSuffix) {
   const abbr = table.abbrs.get(abbrKey(text)) || table.foldedAbbrs.get(fold(text).replace(/ /g, ''));
   if (abbr) return { value: abbr, how: 'kısaltma açıldı', sure: true };
 
-  const key = expandedKey(text, expansions);
-  if (table.names.has(key)) return { value: table.names.get(key), how: 'yazım düzeltildi', sure: true };
-  if (extraSuffix && table.names.has(`${key} ${extraSuffix}`)) {
-    return { value: table.names.get(`${key} ${extraSuffix}`), how: 'eksik kelime tamamlandı', sure: true };
+  // Önce olduğu gibi, sonra her kelimesi sözlükteki en yakın kelimeye düzeltilerek denenir ("Hacetepe Universtesi")
+  const rawKey = expandedKey(text, expansions);
+  const fixedKey = rawKey.split(' ').map((w) => (table.vocab.has(w) ? w : closestWord(w, table.vocab)?.value || w)).join(' ');
+  for (const k of [rawKey, fixedKey]) {
+    if (table.names.has(k)) return { value: table.names.get(k), how: 'yazım düzeltildi', sure: true };
+    if (extraSuffix && table.names.has(`${k} ${extraSuffix}`)) {
+      return { value: table.names.get(`${k} ${extraSuffix}`), how: 'eksik kelime tamamlandı', sure: true };
+    }
   }
+  const key = fixedKey;
 
   // Kısaltılmış kelimeler: "turizm isletm" -> "turizm isletmeciligi"
   const parts = key.split(' ');
@@ -161,7 +168,10 @@ export function cleanName(raw, ctx) {
   let sure = true;
   let fuzzy = false;
   let knownCount = 0;
-  const tokens = squeeze(raw).split(' ');
+  let text = String(raw).replace(/[._]+/g, ' ').replace(/(\p{Ll})(\p{Lu})/gu, '$1 $2'); // ahmet.yilmaz, AhmetYılmaz
+  const parts = text.split(',');
+  if (parts.length === 2 && parts[1].trim()) text = `${parts[1]} ${parts[0]}`; // "YILMAZ, Ahmet" -> "Ahmet YILMAZ"
+  const tokens = squeeze(text).split(' ');
   const value = tokens
     .map((token) => {
       let hit = closestWord(token, ctx.nameDict);
@@ -226,30 +236,77 @@ export function cleanDepartment(raw, ctx) {
 }
 
 export function cleanCity(raw) {
+  const alias = CITY_ALIASES[fold(raw).replace(/ /g, '')];
+  if (alias) return result(alias, true, true, 'şehir adı tamamlandı');
   const hit = closestWord(squeeze(raw), CITY);
   if (hit) return result(hit.value, true, true);
   return result(titleCase(raw), false, false, 'il adı tanınmadı');
 }
 
+// E-posta: biçim hataları ve popüler alan adlarındaki yazım hataları düzeltilir
+//   "mailto:Ahmet@Gmail.com", "<ahmet@gmail.com>", "ahmet (at) gmail.com", "ahmet..yilmaz@", "ahmet yilmaz@" ...
+//   "@gma.il", "@gmial.com", "@gmail.con", "@gmailcom", "@gmail" -> "@gmail.com"
+const domainKey = (d) => d.replace(/[^a-z]/g, '');
+function fixDomain(domain) {
+  if (!domain || DOMAINS.includes(domain)) return domain;
+  const key = domainKey(domain);
+  const near = DOMAINS.filter((d) => {
+    const k = domainKey(d);
+    const base = d.split('.')[0];
+    const dist = editDistance(key, k);
+    // İlk harfi farklı aynı uzunlukta bir ad başka gerçek bir alan adıdır ("email.com" ≠ "gmail.com")
+    const firstLetterSwap = dist === 1 && key.length === k.length && key[0] !== k[0];
+    return key === k || key === base // nokta kaymış ya da eksik: "gma.il", "gmailcom", "gmail"
+      || (dist <= (k.length > 9 ? 2 : 1) && !firstLetterSwap) // harf hatası: "gmial.com", "gmail.con"
+      || (domain.split('.')[0] === base && /^(con|cmo|cm|co|om|vom|xom|comm|coom)$/.test(domain.split('.').slice(1).join('.'))); // ".con"
+  });
+  if (!near.length) return domain;
+  // Birden çok aday varsa en yakını (yandex.con -> yandex.com, yandex.com.tr değil)
+  const score = (d) => editDistance(key, domainKey(d));
+  const best = Math.min(...near.map(score));
+  const top = near.filter((d) => score(d) === best);
+  return top.length === 1 ? top[0] : domain;
+}
+
 export function cleanEmail(raw) {
-  let value = trLower(String(raw).replace(/\s+/g, ''))
+  let value = trLower(squeeze(raw))
+    .replace(/^mailto:/, '').replace(/[<>"'()[\]]/g, (ch) => (ch === '(' || ch === '[' ? ' (' : ch === ')' || ch === ']' ? ') ' : ''))
+    .replace(/\s*\(\s*(at|et)\s*\)\s*/g, '@')
     .replace(/[ç]/g, 'c').replace(/[ğ]/g, 'g').replace(/[ı]/g, 'i')
     .replace(/[ö]/g, 'o').replace(/[ş]/g, 's').replace(/[ü]/g, 'u')
-    .replace(/@+/g, '@').replace(/,/g, '.').replace(/\.+$/, '').replace(/\.con$/, '.com');
+    .replace(/[()]/g, '').trim();
+  let [local = '', domain = ''] = value.replace(/\s*@+\s*/g, '@').split('@');
+  local = local.replace(/\s+/g, '.').replace(/\.{2,}/g, '.').replace(/^\.|\.$/g, ''); // "ahmet yilmaz", "ahmet..yilmaz", "ahmet."
+  domain = domain.replace(/\s+/g, '').replace(/,/g, '.').replace(/\.{2,}/g, '.').replace(/^\.|\.$/g, '');
+  const fixedDomain = fixDomain(domain);
+  value = domain || raw.includes('@') ? `${local}@${fixedDomain}` : local;
   let note = value !== trLower(squeeze(raw)) ? 'biçim düzeltildi' : '';
-  // Popüler alan adlarındaki harf hatası: "gmial.com" -> "gmail.com"
-  const [local, domain = ''] = value.split('@');
-  if (domain && !DOMAINS.includes(domain)) {
-    const near = DOMAINS.filter((d) => editDistance(domain, d) <= (d.length > 9 ? 2 : 1));
-    if (near.length === 1) { value = `${local}@${near[0]}`; note = 'alan adı düzeltildi'; }
-  }
+  if (fixedDomain !== domain) note = 'alan adı düzeltildi';
   const valid = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(value);
   return result(value, valid, valid, valid ? note : 'geçersiz e-posta');
 }
 
+// E-postayı "gerçek kişi adresi" biçimine getirir: kullanıcı adındaki teknik/sistem ekleri çıkarılır
+//   "ece.demirci.ref27@" -> "ece.demirci@", "ali.can+bulten@" -> "ali.can@", "test.zeynep@" -> "zeynep@",
+//   "mehmet_demir_2024@" -> "mehmet_demir@". İsme bitişik sayılar (ahmet1990) kişiye aittir, korunur.
+const TECH_SEGMENT = /^(ref|id|no|kod|kayit|user|usr|uye|test|tmp|temp|dummy|deneme|sample|ornek|demo|x+)\d*$|^\d+$/;
+export function humanizeEmail(email) {
+  const at = email.indexOf('@');
+  if (at < 1) return email;
+  const local = email.slice(0, at).replace(/\+.*$/, ''); // "+etiket" eki
+  const domain = email.slice(at);
+  const sep = (local.match(/[._-]/) || ['.'])[0];
+  const parts = local.split(/[._-]/).filter(Boolean);
+  const kept = parts.filter((p) => !TECH_SEGMENT.test(p));
+  if (!kept.length || !kept.some((p) => /[a-z]{2,}/.test(p))) return `${local}${domain}`;
+  return `${kept.join(sep)}${domain}`;
+}
+
 // Tüm telefonlar tek biçime: 0555 100 00 01
 export function cleanPhone(raw) {
-  let d = String(raw).replace(/\D/g, '');
+  // Rakam yerine yazılmış harfler: "O555" (O harfi) -> 0555, "l" / "I" -> 1
+  const text = /\d{3}/.test(String(raw)) ? String(raw).replace(/[oO]/g, '0').replace(/[lI]/g, '1') : String(raw);
+  let d = text.replace(/\D/g, '');
   if (d.startsWith('0090')) d = d.slice(4);
   if (d.length === 12 && d.startsWith('90')) d = d.slice(2);
   if (d.length === 10) d = `0${d}`;
@@ -262,10 +319,16 @@ export function cleanAddress(raw, ctx) {
   let text = squeeze(raw);
   let number = '';
   text = text.replace(/\bno\s*[.:]?\s*(\d+[a-zA-Z]?)/i, (_, n) => { number = n; return ' '; });
+  let floor = '';
+  let flat = '';
+  text = text.replace(/\b(kat|k)\s*[.:]?\s*(\d+)\b/i, (_, __, n) => { floor = n; return ' '; });
+  text = text.replace(/\b(daire|d)\s*[.:]?\s*(\d+)\b/i, (_, __, n) => { flat = n; return ' '; });
   text = text.replace(/[,/;|]|\s-\s|^\s*-|-\s*$/g, ' ').replace(/\./g, '. ');
   let value = fixWords(text.replace(/\./g, ''), ctx, ADDRESS_WORDS);
   value = value.replace(/(Mahallesi) (?=\S)/, '$1, ');
   if (number) value = `${value} No: ${number}`;
+  if (floor) value = `${value} Kat: ${floor}`;
+  if (flat) value = `${value} Daire: ${flat}`;
   return result(squeeze(value), true, false);
 }
 
@@ -277,13 +340,14 @@ export function cleanDate(raw) {
     return result(`${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`, true, true);
   }
   const s = squeeze(raw);
-  let m = s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  const fullYear = (y) => (y.length === 2 ? (Number(y) > 30 ? `19${y}` : `20${y}`) : y);
+  let m = s.match(/^(\d{4})[-./, ](\d{1,2})[-./, ](\d{1,2})/);
   if (m) return result(`${pad(m[3])}.${pad(m[2])}.${m[1]}`, true, true);
-  m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})$/);
-  if (m && Number(m[1]) <= 31 && Number(m[2]) <= 12) {
-    const year = m[3].length === 2 ? (Number(m[3]) > 30 ? `19${m[3]}` : `20${m[3]}`) : m[3];
-    return result(`${pad(m[1])}.${pad(m[2])}.${year}`, true, true);
-  }
+  m = s.match(/^(\d{1,2})\s*[-./,\s]\s*(\d{1,2})\s*[-./,\s]\s*(\d{2,4})$/);
+  if (m && Number(m[1]) <= 31 && Number(m[2]) <= 12) return result(`${pad(m[1])}.${pad(m[2])}.${fullYear(m[3])}`, true, true);
+  // Ay adıyla: "5 Mart 1998", "05 mar 98", "12 Ağustos 2000"
+  m = fold(s).match(/^(\d{1,2}) ([a-z]+) (\d{2,4})$/);
+  if (m && MONTHS[m[2]] && Number(m[1]) <= 31) return result(`${pad(m[1])}.${pad(MONTHS[m[2]])}.${fullYear(m[3])}`, true, true, 'ay adı sayıya çevrildi');
   return result(s, false, false, 'tarih biçimi tanınmadı');
 }
 

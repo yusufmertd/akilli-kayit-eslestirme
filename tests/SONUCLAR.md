@@ -26,6 +26,7 @@ Sentetik testler varsayılan **"2. Ayıklama"** modunda ölçülür.
 | Sentetik - başlıklar anlamsız ("Sütun 1, Sütun 2…") | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 21 | **%99.4** / %100.0 (0 yanlış) |
 | Sentetik - hepsi bir arada, ağır kirlilik | 382 | 0 (kesinlik %100.0) | %99.6 | %35.4 → **%98.5** | 24 | **%98.5** / %99.6 (0 yanlış) |
 
+- Yaygın yazım hataları (tests/yazim-hatalari.js; e-posta, telefon, tarih, şehir, ad, üniversite, bölüm, fakülte, unvan, adres): 86 / 86 örnek doğru
 - Kategori tanıma (58 kategori; başlıktan ve başlık anlamsızsa içerikten): 55 / 55 örnek doğru
 - Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
 - Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru

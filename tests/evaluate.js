@@ -13,6 +13,7 @@ import { fold } from '../src/engine/text.js';
 import { findHeaderRow } from '../src/engine/table.js';
 import { detectColumnType, CATEGORIES } from '../src/engine/categories.js';
 import { makeDataset, extendDataset } from './generate.js';
+import { runTypoCases } from './yazim-hatalari.js';
 import { readFile } from '../src/io.js';
 
 XLSX.set_fs(fs);
@@ -221,8 +222,10 @@ for (const r of results) {
 const headerOk = evalHeaderDetection();
 const csvOk = await evalCsvFixture();
 const det = evalDetection();
+const typos = runTypoCases();
+if (typos.wrong.length) console.log('Yazım hatası testi hataları:', typos.wrong);
 if (det.wrong.length) console.log('Kategori tanıma hataları:', det.wrong);
-const table = `${lines.join('\n')}\n\n- Kategori tanıma (${CATEGORIES.length} kategori; başlıktan ve başlık anlamsızsa içerikten): ${det.ok} / ${det.total} örnek doğru\n- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): ${headerOk ? 'tüm örnekler doğru' : 'HATALI'}\n- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (\`tests/data/Windows1254_noktali_virgul.csv\`): ${csvOk}`;
+const table = `${lines.join('\n')}\n\n- Yaygın yazım hataları (tests/yazim-hatalari.js; e-posta, telefon, tarih, şehir, ad, üniversite, bölüm, fakülte, unvan, adres): ${typos.ok} / ${typos.total} örnek doğru\n- Kategori tanıma (${CATEGORIES.length} kategori; başlıktan ve başlık anlamsızsa içerikten): ${det.ok} / ${det.total} örnek doğru\n- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): ${headerOk ? 'tüm örnekler doğru' : 'HATALI'}\n- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (\`tests/data/Windows1254_noktali_virgul.csv\`): ${csvOk}`;
 console.log(table);
 
 if (process.argv.includes('--hatalar')) {

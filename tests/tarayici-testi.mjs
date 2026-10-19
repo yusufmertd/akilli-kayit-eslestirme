@@ -49,6 +49,8 @@ await page.click('.topnav >> text=Uygulama');
 await page.click('text=Ham_Veri.xlsx');
 await page.waitForSelector('.result');
 check('Örnek dosya yüklendi', (await page.locator('.result tbody tr').count()) === 96);
+const emailTexts = await page.locator('.result tbody tr td:nth-child(6)').allInnerTexts();
+check('E-postalar gerçek kişi biçiminde (teknik ek yok)', emailTexts.length === 96 && emailTexts.every((e) => e.includes('@') && !/ref\d/.test(e)), emailTexts[1]);
 check('Telefon biçimi ayarı uygulandı', (await page.locator('.result tbody tr').first().innerText()).includes('+90 555 100 00 01'));
 check('Çok sayfalı dosya: sayfa seçici', await page.locator('.file select').count() === 1);
 check('Mod isimleri', (await page.locator('.modes button').allInnerTexts()).join('|') === '1. Otomatik|2. Ayıklama|3. Manuel');

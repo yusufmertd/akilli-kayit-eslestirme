@@ -77,7 +77,8 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
    - **Tema:** Sistem (tarayıcının açık/koyu ayarını izler) / Açık / Koyu
    - **Tablo:** yoğunluk (rahat/sıkı), uzun metinleri alt satıra kaydırma (tablo sayfaya sığar), renklendirme, açıklama balonları
    - **Eşleştirme:** yeni dosyalar için varsayılan mod, tekrarları varsayılan olarak tek satıra indirme
-   - **Biçimler:** telefon (`0555 100 00 01` / `05551000001` / `+90 555 100 00 01`), tarih (`05.03.1998` / `1998-03-05` / `05/03/1998`)
+   - **Biçimler:** telefon (`0555 100 00 01` / `05551000001` / `+90 555 100 00 01`), tarih (`05.03.1998` / `1998-03-05` / `05/03/1998`),
+     e-postaları gerçek kişi biçimine getirme
    - **İndirme:** CSV ayırıcısı (virgül / Türkçe Excel için noktalı virgül), grup no sütunu, Excel'e **"Değişiklikler"** sayfası
      (hangi hücre, eski değer, yeni değer, neden)
    "Nasıl çalışır?" sekmesi yöntemi kullanıcıya kısaca anlatır.
@@ -126,12 +127,22 @@ karşılaştırmayı bozmaz. (Türkçe'ye özgü `I/ı`, `İ/i` dönüşümleri 
 - **Dosyadan öğrenme:** Dosyada bir yerde `Kampüs` yazıyorsa başka yerdeki `Kampus` da düzeltilir.
   Dosyada en az iki kez geçen isimler (sözlükte olmasa bile) bilinen isim sayılır; ancak sözlükteki bir isme
   1 harf uzaklıkta olanlar (tekrar eden yazım hatası: `Neihr` ~ `Nehir`) öğrenilmez.
-- **E-posta:** boşluklar silinir, küçük harfe çevrilir. İsimle karşılaştırılarak kaymış nokta onarılır
-  (`cano.zdemir.ege@` → `can.ozdemir.ege@`).
-  Popüler alan adlarındaki hatalar düzeltilir (`gmial.com` → `gmail.com`, `outlok.com`, `.con`).
-- **Telefon:** tek biçime: `0555 100 00 01`. **Adres:** `Mah./Cad./Sk./Blv.` açılır, tek biçime getirilir:
-  `Yeni Mahallesi, Bilim Caddesi No: 8`. **Şehir:** 81 il listesiyle düzeltilir. **Tarih:** `5.3.1998`, `1998-03-05`,
-  Excel tarih sayısı → `05.03.1998`.
+- **E-posta:** küçük harfe çevrilir; `mailto:`, `<...>`, `(at)`, `..`, boşluk gibi biçim hataları düzeltilir.
+  İsimle karşılaştırılarak kaymış nokta onarılır (`cano.zdemir.ege@` → `can.ozdemir.ege@`).
+  Popüler alan adlarındaki hatalar düzeltilir: `@gma.il`, `@gmial.com`, `@gamil.com`, `@gmail.con`, `@gmailcom`, `@gmail`
+  → `@gmail.com`; `hotmial`, `outlok`, `yaho`, `yandex.con`... Gerçek başka alan adları korunur (`email.com` ≠ `gmail.com`).
+  **Gerçek kişi biçimi** (Ayarlar'da, varsayılan açık): kullanıcı adındaki teknik/sistem ekleri genel bir kuralla çıkarılır
+  (`ref27`, `id12`, `test`, `tmp`, `demo`, `+etiket`, tek başına sayılar): `ece.demirci.ref27@` → `ece.demirci@`,
+  `ali+bulten@` → `ali@`. İsme bitişik sayılar (`ahmet1990`) kişiye aittir, korunur. Bu işlem eşleştirmeden **sonra** yapılır;
+  iki farklı kişinin adresi aynı hâle gelecekse ikisi de olduğu gibi kalır. Alan adı uydurulmaz (`example.invalid` gibi
+  yer tutucu alan adları değiştirilmez, çünkü gerçek bir kişinin adresini tahmin etmek yanlış bilgi üretir).
+- **Ad Soyad:** `ahmet.yilmaz`, `ahmet_yilmaz`, `AhmetYılmaz`, `YILMAZ, Ahmet` → `Ahmet Yılmaz`.
+- **Kelime düzeyinde harf hatası:** üniversite/bölüm/fakülte adlarında her kelime sözlükteki en yakın kelimeye düzeltilir
+  (`Hacetepe Universtesi` → `Hacettepe Üniversitesi`, `Egitim Fakültsi` → `Eğitim Fakültesi`, `Bilgisyar` → `Bilgisayar`).
+- **Telefon:** tek biçime: `0555 100 00 01`; rakam yerine yazılmış harfler (`O555`) de düzeltilir. **Adres:** `Mah./Mh./Cad./Cd./Sk./Blv.`
+  açılır, kat/daire ayrıştırılır: `yeni mah bilim cad no 8 k:2 d:3` → `Yeni Mahallesi, Bilim Caddesi No: 8 Kat: 2 Daire: 3`.
+  **Şehir:** 81 il + halk arasındaki adlar (`İst.`, `Ank.`, `Antep`, `Urfa`, `Maraş`, `Afyon`, `İzmit`, `Antakya`, `İçel`...).
+  **Tarih:** `5.3.1998`, `1998-03-05`, `05,03,1998`, `5 Mart 1998`, `05 mar 98`, Excel tarih sayısı → `05.03.1998`.
 - **Unvan / Fakülte / Öğrenim / Cinsiyet:** sözlük + eş anlamlılar (`Araştırma Görevlisi`, `Ars. Gor.` → `Arş. Gör.`;
   `Yrd. Doç. Dr.` → `Dr. Öğr. Üyesi`; `K`, `Bayan` → `Kadın`). Kurum + fakülte birlikte yazılmışsa ikisi de düzeltilir
   (`Uludağ Üniversitesi Tıp Fak.` → `Uludağ Üniversitesi Tıp Fakültesi`).
@@ -217,6 +228,7 @@ tohumla çalıştırılır.
 | Sentetik - başlıklar anlamsız ("Sütun 1, Sütun 2…") | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 21 | **%99.4** / %100.0 (0 yanlış) |
 | Sentetik - hepsi bir arada, ağır kirlilik | 382 | 0 (kesinlik %100.0) | %99.6 | %35.4 → **%98.5** | 24 | **%98.5** / %99.6 (0 yanlış) |
 
+- Yaygın yazım hataları (tests/yazim-hatalari.js; e-posta, telefon, tarih, şehir, ad, üniversite, bölüm, fakülte, unvan, adres): 86 / 86 örnek doğru
 - Kategori tanıma (58 kategori; başlıktan ve başlık anlamsızsa içerikten): 55 / 55 örnek doğru
 - Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
 - Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru
@@ -232,9 +244,14 @@ Kalan hataların büyük kısmı ilkesel olarak düzeltilemeyen durumlardır: te
 (doldurulacak kaynak yok) veya sözlükte olmayan ve dosyada hiç doğru yazılmamış isimler (`Tumerkan` → `Tümerkan`).
 Bu tür değerler sarı ile işaretlenip kullanıcıya sorulur.
 
-**4. Tarayıcı testi (`tests/tarayici-testi.mjs`):** Uygulama gerçek bir tarayıcıda (Playwright + Chromium) baştan sona
-denenir: 36 kontrol, hepsi geçiyor. Kapsam: giriş ve sekmeler, ayarlar (tema sistem/açık/koyu, telefon biçimi, CSV ayırıcı,
-değişiklik raporu), örnek dosyalar, çok sayfalı Excel, Windows-1254 CSV, başlıksız dosyada içerikten tanıma, üç mod,
+**4. Yaygın yazım hataları (`tests/yazim-hatalari.js`):** her kategoride sık yapılan 86 hata ve beklenen doğru yazımı
+(e-posta alan adları, telefon, tarih, şehir takma adları, ad biçimleri, üniversite/bölüm/fakülte harf hataları, unvan, adres,
+gerçek kişi biçimi e-posta): **86 / 86 doğru**. Bu liste iki gizli hatayı da yakaladı: `İzmit` → `İzmir`, `Antakya` → `Antalya`
+(harf hatası sanılıyordu; artık halk arasındaki adlar sözlüğünden doğru ile çevriliyor).
+
+**5. Tarayıcı testi (`tests/tarayici-testi.mjs`):** Uygulama gerçek bir tarayıcıda (Playwright + Chromium) baştan sona
+denenir: 37 kontrol, hepsi geçiyor. Kapsam: giriş ve sekmeler, ayarlar (tema sistem/açık/koyu, telefon biçimi, CSV ayırıcı,
+değişiklik raporu), e-postaların gerçek kişi biçiminde olması, örnek dosyalar, çok sayfalı Excel, Windows-1254 CSV, başlıksız dosyada içerikten tanıma, üç mod,
 soruyu cevaplama / atlama / geri alma, hücre balonuyla düzeltme ve geri alma, sütun türünü değiştirme, tekrarları tek satıra
 indirme, grubu ayırma, Excel ve CSV indirme, açıklama balonunun katmanı, 1366px ekranda tablonun yana kaydırmadan sığması,
 mobilde (390px) sayfanın taşmaması ve konsolda hata olmaması.
@@ -253,6 +270,7 @@ mobilde (390px) sayfanın taşmaması ve konsolda hata olmaması.
 | Aynı isimli farklı kişiler kullanıcıya hiç sorulmuyordu (kullanıcı geri bildirimi) | "Birleştireyim mi?" + "Hangisi doğru?" soruları | |
 | Grup içinde gerçekten farklı iki değer (iki üniversite) sessizce tek değere indiriliyordu | Yazım çeşidi / gerçek çelişki ayrımı, çelişkide sor | |
 | CSV okuyucu `12/11/1975`'i Amerikan tarihi sanıp 11 Aralık yaptı | CSV ham metin olarak okunur, tarih ayrıştırması bizde | |
+| `İzmit` → `İzmir`, `Antakya` → `Antalya` (yanlış il); `@gma.il`, `5 Mart 1998`, `YILMAZ, Ahmet` düzeltilemiyordu | Yaygın hata listesi + halk arasındaki şehir adları, ay adları, kelime düzeyinde düzeltme | Yazım hatası testi 49/86 → 86/86 |
 | Açıklama balonları gizliyken bile yer kaplayıp tabloda ve mobilde yana kaydırma oluşturuyordu | Balon sadece üzerine gelince oluşur; tür listesi şeffaf katman | Tablo 1490px → 1316px (ekrana sığar) |
 | Mod açıklama balonu asistan kutusunun altında kalıyordu (kullanıcı geri bildirimi) | Üzerine gelinen öğe en üst katmana alınır | |
 | Çok fazla soru soruluyordu (kullanıcı geri bildirimi: "her şeyi tek tek sormasın") | 3 mod; harf hatası, kurum/fakülte, e-posta hiç sorulmaz | Ağır kirlilikte 79 → 18 soru, doğruluk aynı |

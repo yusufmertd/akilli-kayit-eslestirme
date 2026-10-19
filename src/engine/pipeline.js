@@ -15,12 +15,12 @@
 //            auto       : hiç soru yok, tüm kararları algoritma verir
 //            suspicious : sadece belirsiz eşleşmeler sorulur (aynı isimli kişiler, şüpheli çiftler)
 //            manual     : her eşleşme, her çelişki ve emin olunamayan her yazım sorulur
-//   format:  { phone: 'spaced'|'plain'|'intl', date: 'dmy'|'iso'|'slash' } -> çıktı biçimi (Ayarlar)
+//   format:  { phone: 'spaced'|'plain'|'intl', date: 'dmy'|'iso'|'slash', humanEmail: bool } -> çıktı biçimi (Ayarlar)
 //   review:  'all' | undefined                      -> manuel modda "kalan eşleşmelerin hepsini onayla" dendi mi?
 //   groups:  { "0,11,58": true | false }            -> otomatik bulunan grup onaylandı mı / reddedildi mi?
 
 import { fold, isEmpty, similarity, hasTurkishChars, titleCase, trUpper, trLower } from './text.js';
-import { buildContext } from './fields.js';
+import { buildContext, humanizeEmail } from './fields.js';
 import { CATEGORIES, CLEANERS, categoryOf, detectColumnType } from './categories.js';
 import { findPairs, buildGroups } from './matcher.js';
 
@@ -205,6 +205,25 @@ export function processTable(headers, rows, decisions = {}) {
       const fixed = cell && repairEmailDots(cell.value, fullName(row));
       if (fixed && fixed !== cell.value) row[col] = { ...cell, value: fixed, note: 'e-postadaki nokta düzeltildi' };
     });
+  }
+
+  // E-postaları gerçek kişi adresi biçimine getir (Ayarlar): "ece.demirci.ref27@" -> "ece.demirci@"
+  // Eşleştirme bittikten sonra yapılır; iki FARKLI kişinin adresi aynı hâle gelecekse ikisi de olduğu gibi kalır.
+  if (decisions.format?.humanEmail) {
+    for (const col of colsOf('email')) {
+      const owners = new Map(); // sadeleşmiş adres -> kişi (grup) listesi
+      final.forEach((row, r) => {
+        if (!row[col]) return;
+        const h = humanizeEmail(row[col].value);
+        if (!owners.has(h)) owners.set(h, new Set());
+        owners.get(h).add(groupOf[r]);
+      });
+      final.forEach((row) => {
+        if (!row[col]) return;
+        const h = humanizeEmail(row[col].value);
+        if (h !== row[col].value && owners.get(h).size === 1) row[col] = { ...row[col], value: h, note: 'e-postadaki teknik ek kaldırıldı' };
+      });
+    }
   }
 
   // Çıktı biçimi (Ayarlar): telefon ve tarihler kullanıcının seçtiği biçime getirilir

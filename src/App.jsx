@@ -43,7 +43,10 @@ export default function App() {
   }, [settings]);
 
   // Kararlar veya biçim ayarları değiştikçe algoritma baştan çalışır (birkaç yüz satır için anlık)
-  const format = useMemo(() => ({ phone: settings.phoneFormat, date: settings.dateFormat }), [settings.phoneFormat, settings.dateFormat]);
+  const format = useMemo(
+    () => ({ phone: settings.phoneFormat, date: settings.dateFormat, humanEmail: settings.humanEmail }),
+    [settings.phoneFormat, settings.dateFormat, settings.humanEmail],
+  );
   const results = useMemo(
     () => sheets.map((s, i) => processTable(s.headers, s.rows, { ...decisions[i], format })),
     [sheets, decisions, format],

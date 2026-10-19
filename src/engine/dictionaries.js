@@ -387,6 +387,7 @@ export const INSTITUTION_WORDS = {
 
 export const DEPARTMENT_WORDS = {
   muh: 'Mühendisliği', muhendis: 'Mühendisliği', muhendisl: 'Mühendisliği', eng: 'Mühendisliği',
+  elk: 'Elektrik', elektr: 'Elektrik', bilg: 'Bilgisayar', mak: 'Makine', makina: 'Makine', end: 'Endüstri', kim: 'Kimya',
   ogrt: 'Öğretmenliği', ogr: 'Öğretmenliği', ogretmen: 'Öğretmenliği',
   yon: 'Yönetimi', ed: 'Edebiyatı', edb: 'Edebiyatı', isl: 'İşletmeciliği',
 };
@@ -488,10 +489,31 @@ Erkek|E,Bay,M,Male,Man
 `;
 
 // Sık kullanılan e-posta alan adları: "gmial.com" -> "gmail.com"
+// (mail.com bilerek yok: "email.com" gibi gerçek alan adlarını yanlışlıkla "düzeltmesin")
 export const EMAIL_DOMAINS = `gmail.com hotmail.com outlook.com yahoo.com icloud.com yandex.com live.com
-msn.com hotmail.com.tr outlook.com.tr yahoo.com.tr windowslive.com protonmail.com mail.com`;
+msn.com hotmail.com.tr outlook.com.tr yahoo.com.tr windowslive.com protonmail.com yandex.com.tr mynet.com
+superonline.com ttmail.com gmx.com gmx.de`;
 
-export const FACULTY_WORDS = { fak: 'Fakültesi', fakultesi: 'Fakültesi', enst: 'Enstitüsü', ens: 'Enstitüsü', yo: 'Yüksekokulu' };
+export const FACULTY_WORDS = {
+  fak: 'Fakültesi', fk: 'Fakültesi', fakulte: 'Fakültesi', fakultesi: 'Fakültesi', enst: 'Enstitüsü', ens: 'Enstitüsü', yo: 'Yüksekokulu',
+  muh: 'Mühendislik', edb: 'Edebiyat',
+};
+
+// Şehirlerin halk arasındaki adları ve kısaltmaları (katlanmış, boşluksuz anahtar)
+export const CITY_ALIASES = {
+  ist: 'İstanbul', ank: 'Ankara', izm: 'İzmir', antep: 'Gaziantep', urfa: 'Şanlıurfa', maras: 'Kahramanmaraş',
+  kmaras: 'Kahramanmaraş', afyon: 'Afyonkarahisar', izmit: 'Kocaeli', antakya: 'Hatay', iskenderun: 'Hatay',
+  adapazari: 'Sakarya', icel: 'Mersin', tarsus: 'Mersin', alanya: 'Antalya', bodrum: 'Muğla', fethiye: 'Muğla',
+  gebze: 'Kocaeli', corlu: 'Tekirdağ', inegol: 'Bursa', polatli: 'Ankara', eregli: 'Zonguldak',
+};
+
+// Ay adları ve kısaltmaları (Türkçe ve İngilizce): "5 Mart 1998" -> 05.03.1998
+export const MONTHS = {
+  ocak: 1, oca: 1, jan: 1, january: 1, subat: 2, sub: 2, feb: 2, february: 2, mart: 3, mar: 3, march: 3,
+  nisan: 4, nis: 4, apr: 4, april: 4, mayis: 5, may: 5, haziran: 6, haz: 6, jun: 6, june: 6,
+  temmuz: 7, tem: 7, jul: 7, july: 7, agustos: 8, agu: 8, aug: 8, august: 8, eylul: 9, eyl: 9, sep: 9, september: 9,
+  ekim: 10, eki: 10, oct: 10, october: 10, kasim: 11, kas: 11, nov: 11, november: 11, aralik: 12, ara: 12, dec: 12, december: 12,
+};
 
 // Ülkeler / uyruk (sık geçenler). "Doğru Yazım|eş anlamlılar"
 export const COUNTRIES = `
