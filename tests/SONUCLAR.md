@@ -1,7 +1,7 @@
 # Test Sonuçları
 
 Komut: `npm test` (sentetik testler 5 farklı tohumla üretilir, toplam sonuç verilir).
-Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülür.
+Sentetik testler varsayılan **"2. Ayıklama"** modunda ölçülür.
 
 - **Yanlış birleştirme:** farklı kişilere ait olduğu hâlde "aynı kişi" denen satır çifti sayısı (en zararlı hata).
 - **Bulunan eşleşme:** gerçekte aynı kişiye ait satır çiftlerinin ne kadarının bulunduğu.
@@ -11,9 +11,9 @@ Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülür.
 
 | Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
 |---|---|---|---|---|---|---|
-| Ham_Veri.xlsx – otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – şüphelileri göster modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – tam manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – 1. Otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – 2. Ayıklama modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – 3. Manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
 | Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 21 | **%99.6** / %100.0 (0 yanlış) |
 | Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 21 | **%99.1** / %100.0 (0 yanlış) |
 | Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.6** | 18 | **%97.6** / %100.0 (0 yanlış) |

@@ -50,16 +50,29 @@ export function tableFor(sheet, result, { dedupe = false, withGroup = false } = 
 
 const baseName = (fileName) => fileName.replace(/\.[^.]+$/, '');
 
+// "Değişiklikler" raporu: hangi hücre neden değişti (Ayarlar'dan açılır)
+function changeReport(sheet, result) {
+  const rows = [['Sayfa', 'Satır', 'Sütun', 'Eski değer', 'Yeni değer', 'Neden']];
+  result.cells.forEach((row, r) => row.forEach((cell, c) => {
+    if (cell.status !== 'same') rows.push([sheet.name, r + 2 + (sheet.skipped || 0), sheet.headers[c], cell.original, cell.value, cell.note || (cell.status === 'filled' ? 'dolduruldu' : 'düzeltildi')]);
+  }));
+  return rows;
+}
+
 export function downloadXlsx(fileName, sheets, results, options) {
   const wb = XLSX.utils.book_new();
   sheets.forEach((sheet, i) => {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tableFor(sheet, results[i], options[i])), sheet.name.slice(0, 31));
   });
+  if (options.some((o) => o.report)) {
+    const report = sheets.flatMap((sheet, i) => (options[i].report ? changeReport(sheet, results[i]).slice(i === 0 ? 0 : 1) : []));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(report), 'Degisiklikler');
+  }
   XLSX.writeFile(wb, `${baseName(fileName)}_temiz.xlsx`);
 }
 
 export function downloadCsv(fileName, sheet, result, options, multiSheet) {
-  const csv = XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(tableFor(sheet, result, options)));
+  const csv = XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(tableFor(sheet, result, options)), { FS: options.sep || ',' });
   // Başa BOM eklenir ki Excel Türkçe karakterleri doğru göstersin
   const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

@@ -5,9 +5,9 @@ import { fold } from '../engine/text.js';
 // Asistan baloncuğu: algoritmanın emin olamadığı konuları kullanıcıya TEK TEK sorar.
 // Her cevaptan sonra algoritma yeniden çalışır ve sıradaki soru gelir.
 const MODE_TEXT = {
-  auto: 'Otomatik moddayım: tüm kararları ben verdim, hiçbir şey sormuyorum.',
-  suspicious: 'Sadece emin olamadığım eşleşmeleri soruyorum; yazım hatalarını, kurum/fakülte ve e-posta seçimini kendim yaptım.',
-  manual: 'Tam manuel moddayım: her eşleşmeyi ve her çelişkiyi sana soruyorum.',
+  auto: '1. Otomatik moddayım: tüm kararları ben verdim, hiçbir şey sormuyorum.',
+  suspicious: '2. Ayıklama modundayım: sadece şüpheli eşleşmeleri ayıklayıp soruyorum; yazım hatalarını, kurum/fakülte ve e-posta seçimini kendim yaptım.',
+  manual: '3. Manuel moddayım: her eşleşmeyi ve her çelişkiyi sana soruyorum.',
 };
 
 export default function Assistant({ result, sheet, mode, dedupe, skipped, onAnswer, onSkip, onUnskipAll, onUndo, canUndo, onDownload }) {

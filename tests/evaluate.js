@@ -78,7 +78,7 @@ function measure(headers, rows, personOf, expected, cols, mode = 'suspicious') {
   };
 }
 
-const MODE_NAMES = { auto: 'otomatik mod (hiç soru yok)', suspicious: 'şüphelileri göster modu', manual: 'tam manuel mod' };
+const MODE_NAMES = { auto: '1. Otomatik mod (hiç soru yok)', suspicious: '2. Ayıklama modu', manual: '3. Manuel mod' };
 function evalSample(mode = 'suspicious') {
   const wb = XLSX.readFile(`${dir}data/Ham_Veri.xlsx`);
   const [headers, ...rows] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
@@ -235,7 +235,7 @@ if (process.argv.includes('--hatalar')) {
 fs.writeFileSync(`${dir}SONUCLAR.md`, `# Test Sonuçları
 
 Komut: \`npm test\` (sentetik testler 5 farklı tohumla üretilir, toplam sonuç verilir).
-Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülür.
+Sentetik testler varsayılan **"2. Ayıklama"** modunda ölçülür.
 
 - **Yanlış birleştirme:** farklı kişilere ait olduğu hâlde "aynı kişi" denen satır çifti sayısı (en zararlı hata).
 - **Bulunan eşleşme:** gerçekte aynı kişiye ait satır çiftlerinin ne kadarının bulunduğu.

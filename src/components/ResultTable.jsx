@@ -29,6 +29,8 @@ export default function ResultTable({ result, collapsed, onCorrect, onType }) {
                 <th key={c}>
                   {h}
                   <span className="type-pick" data-tip={`${categoryOf(result.types[c]).hint}. Neden bu tür: ${result.typeReasons[c]}. Yanlışsa listeden değiştirin.`}>
+                    {/* Görünen kısa etiket; asıl liste üzerine şeffaf yerleşir, böylece tablo genişliğini büyütmez */}
+                    <span className="type-label">{categoryOf(result.types[c]).label}</span>
                     <select value={result.types[c]} onChange={(e) => onType(c, e.target.value)} aria-label={`${h} sütununun türü`}>
                       {CATEGORY_GROUPS.map(({ group, items }) => (
                         <optgroup key={group} label={GROUP_LABELS[group] || group}>
@@ -49,7 +51,7 @@ export default function ResultTable({ result, collapsed, onCorrect, onType }) {
                   const id = `${r}-${c}`;
                   const shown = values ? values[c] : cell.value;
                   return (
-                    <td key={c} className={`${cell.status} ${cell.unsure ? 'unsure' : ''} ${open === id ? 'open' : ''}`}>
+                    <td key={c} className={`t-${result.types[c]} ${cell.status} ${cell.unsure ? 'unsure' : ''} ${open === id ? 'open' : ''}`}>
                       <button className="cell" onClick={() => setOpen(open === id ? null : id)}>{String(shown ?? '')}</button>
                       {open === id && (
                         <CellBubble

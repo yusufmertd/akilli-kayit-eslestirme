@@ -15,6 +15,7 @@
 //            auto       : hiç soru yok, tüm kararları algoritma verir
 //            suspicious : sadece belirsiz eşleşmeler sorulur (aynı isimli kişiler, şüpheli çiftler)
 //            manual     : her eşleşme, her çelişki ve emin olunamayan her yazım sorulur
+//   format:  { phone: 'spaced'|'plain'|'intl', date: 'dmy'|'iso'|'slash' } -> çıktı biçimi (Ayarlar)
 //   review:  'all' | undefined                      -> manuel modda "kalan eşleşmelerin hepsini onayla" dendi mi?
 //   groups:  { "0,11,58": true | false }            -> otomatik bulunan grup onaylandı mı / reddedildi mi?
 
@@ -206,6 +207,13 @@ export function processTable(headers, rows, decisions = {}) {
     });
   }
 
+  // Çıktı biçimi (Ayarlar): telefon ve tarihler kullanıcının seçtiği biçime getirilir
+  const DATE_TYPES = ['date', 'birthdate', 'regDate', 'startDate'];
+  types.forEach((t, col) => {
+    const fmt = t === 'phone' ? (v) => formatPhone(v, decisions.format?.phone) : DATE_TYPES.includes(t) ? (v) => formatDate(v, decisions.format?.date) : null;
+    if (fmt) final.forEach((row) => { if (row[col]) row[col] = { ...row[col], value: fmt(row[col].value) }; });
+  });
+
   // Hücrelerin son durumu
   const cells = rows.map((row, r) =>
     headers.map((_, c) => {
@@ -313,6 +321,20 @@ export function collapseRows(result, rawRows) {
 }
 
 // ---------- Yardımcılar ----------
+
+// "0555 100 00 01" -> "05551000001" / "+90 555 100 00 01"
+function formatPhone(v, fmt) {
+  const m = v.match(/^0(\d{3}) (\d{3}) (\d{2}) (\d{2})$/);
+  if (!m || !fmt || fmt === 'spaced') return v;
+  return fmt === 'plain' ? `0${m.slice(1).join('')}` : `+90 ${m.slice(1).join(' ')}`;
+}
+
+// "05.03.1998" -> "1998-03-05" / "05/03/1998"
+function formatDate(v, fmt) {
+  const m = v.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!m || !fmt || fmt === 'dmy') return v;
+  return fmt === 'iso' ? `${m[3]}-${m[2]}-${m[1]}` : `${m[1]}/${m[2]}/${m[3]}`;
+}
 
 // Grup gerekçelerini sadeleştirir: "e-posta aynı" varsa "e-posta neredeyse aynı" gösterilmez, isim için tek ifade kalır
 function tidyReasons(reasons) {

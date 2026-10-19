@@ -47,25 +47,25 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
 
    | Mod | Ne sorar? | Ham_Veri.xlsx'te soru sayısı |
    |---|---|---|
-   | **Otomatik** | Hiçbir şey. Tüm kararları algoritma verir; emin olmadığı eşleşmeleri birleştirmez | 0 |
-   | **Şüphelileri göster** (varsayılan) | Sadece belirsiz eşleşmeler: aynı isimli farklı kişiler, şüpheli kayıt çiftleri | 2 |
-   | **Tam manuel** | Her eşleşme grubu, her çelişki, emin olunamayan her yazım | 34 |
+   | **1. Otomatik** | Hiçbir şey. Tüm kararları algoritma verir; emin olmadığı eşleşmeleri birleştirmez | 0 |
+   | **2. Ayıklama** (varsayılan) | Şüpheli durumları ayıklar, sadece onları sorar: aynı isimli farklı kişiler, şüpheli kayıt çiftleri | 2 |
+   | **3. Manuel** | Her eşleşme grubu, her çelişki, emin olunamayan her yazım | 34 |
 
    Hiçbir modda sorulmayanlar: **harf hataları** (`Abmet Dılmaz` → `Ahmet Yılmaz` kendiliğinden düzeltilir),
    **kurum / fakülte / bölüm / lise / ilçe / pozisyon** (her zaman en uzun, en ayrıntılı ad seçilir) ve **e-posta**
    (kişinin adını taşıyan gerçek adres seçilir; `ref16`, `test`, çok rakamlı adresler geri planda kalır).
 4. **Asistan balonu** özet verir ve seçilen moda göre soruları sırayla sorar. Her cevaptan sonra her şey yeniden hesaplanır:
-   - **Tam manuel modda her eşleşme için:** *"Bu 3 kayıt aynı kişiye ait görünüyor: Abmet Dılmaz, Ahmet Yilmaz, Ahmet Yılmaz
+   - **3. Manuel modda her eşleşme için:** *"Bu 3 kayıt aynı kişiye ait görünüyor: Abmet Dılmaz, Ahmet Yilmaz, Ahmet Yılmaz
      (neden: telefon aynı, e-posta aynı, kurum aynı…). Hepsini “Ahmet Yılmaz” olarak birleştirip düzelteyim mi?"*
      → Evet / Hayır, farklı kişiler / Kalanların hepsini onayla. "Hayır" denen kayıtlar birbirinden ayrılır.
    - **Aynı isimde birden fazla kişi:** *"“Ahmet Yılmaz” isminde 2 farklı kişi buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
-   - **Birleştirince çelişen bilgiler (tam manuel modda):** *"Ahmet Yılmaz için farklı Telefon bilgileri var. Hangisi doğru?"*
+   - **Birleştirince çelişen bilgiler (3. Manuel modda):** *"Ahmet Yılmaz için farklı Telefon bilgileri var. Hangisi doğru?"*
      Diğer modlarda çoğunluğun değeri seçilir.
      → seçenekler, "her kayıt kendi değerini korusun" veya serbest yazım.
    - **Şüpheli iki kayıt:** *"Bu iki kayıt aynı kişiye ait olabilir (benzerlik %80: isim aynı, kurum aynı). Aynı kişi mi?"*
-   - **Emin olunamayan yazım (tam manuel modda):** *"Ad_Soyad sütununda “eymn blgin” yazıyor. Doğru yazımı “Eymen Bilgin” olabilir mi?"*
+   - **Emin olunamayan yazım (3. Manuel modda):** *"Ad_Soyad sütununda “eymn blgin” yazıyor. Doğru yazımı “Eymen Bilgin” olabilir mi?"*
      Cevap aynı yazıma sahip **tüm** hücrelere uygulanır.
-   - **Son soru (tam manuel modda):** *"Her kişi tek satır olsun mu?"* Diğer modlarda görevdeki kurala uygun olarak
+   - **Son soru (3. Manuel modda):** *"Her kişi tek satır olsun mu?"* Diğer modlarda görevdeki kurala uygun olarak
      **tüm satırlar korunur**; istenirse araç çubuğundan "Tekrarları tek satıra indir" seçilebilir.
    - "Şimdilik atla" ve "Son cevabı geri al" her zaman kullanılabilir.
    - **Her butonun üzerine gelince** ne işe yaradığını anlatan kısa bir açıklama çıkar.
@@ -73,17 +73,27 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
      butonlarıyla sonradan da karar değiştirilebilir.
 5. Tabloda **yeşil** = düzeltildi, **mavi** = aynı kişinin diğer kaydından dolduruldu, **sarı** = emin değilim.
    Bir hücreye tıklayınca **hücre balonu** açılır: dosyadaki eski hâli, değişiklik gerekçesi, "doğru mu?" onayı ve düzeltme kutusu.
-6. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
+6. **Ayarlar** sekmesi (ayarlar gizlilik gereği hiçbir yere kaydedilmez):
+   - **Tema:** Sistem (tarayıcının açık/koyu ayarını izler) / Açık / Koyu
+   - **Tablo:** yoğunluk (rahat/sıkı), uzun metinleri alt satıra kaydırma (tablo sayfaya sığar), renklendirme, açıklama balonları
+   - **Eşleştirme:** yeni dosyalar için varsayılan mod, tekrarları varsayılan olarak tek satıra indirme
+   - **Biçimler:** telefon (`0555 100 00 01` / `05551000001` / `+90 555 100 00 01`), tarih (`05.03.1998` / `1998-03-05` / `05/03/1998`)
+   - **İndirme:** CSV ayırıcısı (virgül / Türkçe Excel için noktalı virgül), grup no sütunu, Excel'e **"Değişiklikler"** sayfası
+     (hangi hücre, eski değer, yeni değer, neden)
+   "Nasıl çalışır?" sekmesi yöntemi kullanıcıya kısaca anlatır.
+7. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
    şeklinde birleşir), grup numarası sütunu ekle.
 
 ## Ekran görüntüleri
 
 | | |
 |---|---|
-| ![Giriş](docs/ekranlar/1-giris.png) Giriş: 3 adım ve örnek dosyalar | ![Onay modu](docs/ekranlar/2-eslesme-onay-modu.png) Asistan: eşleşmeleri nasıl onaylamak istersin? |
+| ![Giriş](docs/ekranlar/1-giris.png) Giriş: 3 adım ve örnek dosyalar | ![Modlar](docs/ekranlar/2-eslesme-onay-modu.png) Mod seçici, açıklama balonu, sayfaya sığan tablo |
 | ![Grup](docs/ekranlar/3-grup-birlestireyim-mi.png) "Abmet Dılmaz / Ahmet Yilmaz / Ahmet Yılmaz: birleştireyim mi?" | ![Aynı isim](docs/ekranlar/4-ayni-isim-farkli-kisi.png) Aynı isimde 2 farklı kişi |
 | ![Hangisi doğru](docs/ekranlar/5-hangisi-dogru.png) Birleştirince: hangi kurum doğru? | ![Hücre balonu](docs/ekranlar/6-hucre-balonu.png) Hücre balonu: eski hâli, gerekçe, düzeltme |
 | ![Gruplar](docs/ekranlar/7-gruplar-sekmesi.png) Gruplar sekmesi ve buton açıklaması | ![İçerikten tanıma](docs/ekranlar/8-icerikten-tur-tanima.png) Başlıksız dosyada türler içerikten tanındı |
+| ![Koyu tema](docs/ekranlar/9-koyu-tema.png) Koyu tema | ![Ayarlar](docs/ekranlar/10-ayarlar.png) Ayarlar sekmesi |
+| ![Mobil](docs/ekranlar/11-mobil.png) Mobil görünüm (390px) | |
 
 ## Eşleştirme sistemi nasıl çalışır?
 
@@ -162,7 +172,7 @@ Her alanın değerleri önce **yazım çeşitleri** kümelerine ayrılır (`Ahme
 - **Kurum, fakülte, bölüm, lise, ilçe, pozisyon:** çelişkide soru sorulmaz, **her zaman en uzun (en ayrıntılı) ad**
   seçilir (`Uludağ Üniversitesi` / `Bursa Uludağ Üniv.` / `UÜ` → `Bursa Uludağ Üniversitesi`).
 - **E-posta:** soru sorulmaz; adı ve soyadı içeren, `ref16` / `test` / çok rakam içermeyen gerçek kişi adresi seçilir.
-- **Diğer çelişkiler (telefon, adres, şehir...):** tam manuel modda **"Hangisi doğru?"** diye sorulur, diğer modlarda
+- **Diğer çelişkiler (telefon, adres, şehir...):** 3. Manuel modda **"Hangisi doğru?"** diye sorulur, diğer modlarda
   çoğunluğun değeri seçilir.
   Adreste kapı numarası farklıysa (`No: 8` / `No: 87`) bu da çelişki sayılır. Cevap gelene kadar
   her satır kendi değerini (düzeltilmiş hâliyle) korur.
@@ -192,9 +202,9 @@ tohumla çalıştırılır.
 
 | Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
 |---|---|---|---|---|---|---|
-| Ham_Veri.xlsx – otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – şüphelileri göster modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – tam manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – 1. Otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – 2. Ayıklama modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – 3. Manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
 | Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 21 | **%99.6** / %100.0 (0 yanlış) |
 | Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 21 | **%99.1** / %100.0 (0 yanlış) |
 | Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.6** | 18 | **%97.6** / %100.0 (0 yanlış) |
@@ -211,7 +221,7 @@ tohumla çalıştırılır.
 - Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
 - Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru
 
-Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülmüştür.
+Sentetik testler varsayılan **"2. Ayıklama"** modunda ölçülmüştür.
 
 - **Yanlış birleştirme:** farklı kişilere ait olduğu hâlde "aynı kişi" denen satır çifti. En zararlı hata olduğu için
   tasarım bunu önceliklendirir: tüm testlerde **0**.
@@ -221,6 +231,13 @@ Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülmüşt�
 Kalan hataların büyük kısmı ilkesel olarak düzeltilemeyen durumlardır: tek kaydı olan kişinin boş alanı
 (doldurulacak kaynak yok) veya sözlükte olmayan ve dosyada hiç doğru yazılmamış isimler (`Tumerkan` → `Tümerkan`).
 Bu tür değerler sarı ile işaretlenip kullanıcıya sorulur.
+
+**4. Tarayıcı testi (`tests/tarayici-testi.mjs`):** Uygulama gerçek bir tarayıcıda (Playwright + Chromium) baştan sona
+denenir: 36 kontrol, hepsi geçiyor. Kapsam: giriş ve sekmeler, ayarlar (tema sistem/açık/koyu, telefon biçimi, CSV ayırıcı,
+değişiklik raporu), örnek dosyalar, çok sayfalı Excel, Windows-1254 CSV, başlıksız dosyada içerikten tanıma, üç mod,
+soruyu cevaplama / atlama / geri alma, hücre balonuyla düzeltme ve geri alma, sütun türünü değiştirme, tekrarları tek satıra
+indirme, grubu ayırma, Excel ve CSV indirme, açıklama balonunun katmanı, 1366px ekranda tablonun yana kaydırmadan sığması,
+mobilde (390px) sayfanın taşmaması ve konsolda hata olmaması.
 
 ### Geliştirme sürecinde testlerin yakaladığı hatalar
 İlk sürüm örnek dosyada %100 başarı verdi, ancak sentetik testler gerçek zayıflıkları ortaya çıkardı:
@@ -236,6 +253,8 @@ Bu tür değerler sarı ile işaretlenip kullanıcıya sorulur.
 | Aynı isimli farklı kişiler kullanıcıya hiç sorulmuyordu (kullanıcı geri bildirimi) | "Birleştireyim mi?" + "Hangisi doğru?" soruları | |
 | Grup içinde gerçekten farklı iki değer (iki üniversite) sessizce tek değere indiriliyordu | Yazım çeşidi / gerçek çelişki ayrımı, çelişkide sor | |
 | CSV okuyucu `12/11/1975`'i Amerikan tarihi sanıp 11 Aralık yaptı | CSV ham metin olarak okunur, tarih ayrıştırması bizde | |
+| Açıklama balonları gizliyken bile yer kaplayıp tabloda ve mobilde yana kaydırma oluşturuyordu | Balon sadece üzerine gelince oluşur; tür listesi şeffaf katman | Tablo 1490px → 1316px (ekrana sığar) |
+| Mod açıklama balonu asistan kutusunun altında kalıyordu (kullanıcı geri bildirimi) | Üzerine gelinen öğe en üst katmana alınır | |
 | Çok fazla soru soruluyordu (kullanıcı geri bildirimi: "her şeyi tek tek sormasın") | 3 mod; harf hatası, kurum/fakülte, e-posta hiç sorulmaz | Ağır kirlilikte 79 → 18 soru, doğruluk aynı |
 | "Üniversite" başlığının içindeki "site" yüzünden sütun Web sitesi sanıldı | Başlık kuralları kelime sınırıyla | CSV testi 0/5 → 5/5 |
 | "Ankara" değerleri "Ankara Üniversitesi" sanıldı; "Dil Seviyesi" → Yabancı dil | İçerik testlerinde şehir önce, kategori sırası düzeltildi | Tanıma 53/55 → 55/55 |
@@ -264,6 +283,8 @@ bakılarak verildi ve README'de gerekçeleriyle açıklandı.
 npm install
 npm run dev      # geliştirme sunucusu
 npm test         # doğruluk ölçümü (tests/SONUCLAR.md dosyasını da günceller)
+# tarayıcı testi: npm run build && npx vite preview --port 4179 (ayrı terminalde), sonra:
+npx -y playwright@1.48.2 install chromium && node tests/tarayici-testi.mjs
 npm run build    # yayın için derleme (dist/)
 node tests/make-sample.js   # arayüzde denemek için kirli örnek dosya üretir
 ```
