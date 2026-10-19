@@ -11,6 +11,8 @@
 //   rules:   { [sütun]: { [katlanmış değer]: "doğru yazım" } } -> kullanıcının yazdığı düzeltmeler
 //   cells:   { "satır-sütun": "değer" }             -> tek bir hücreye kullanıcının yazdığı değer
 //   types:   { [sütun]: "name" | "email" ... }      -> kullanıcının seçtiği sütun türü
+//   review:  'each' | 'all' | undefined             -> otomatik eşleşmeler tek tek mi onaylanacak, hepsi mi?
+//   groups:  { "0,11,58": true | false }            -> otomatik bulunan grup onaylandı mı / reddedildi mi?
 
 import { fold, isEmpty, similarity, hasTurkishChars, titleCase, trUpper, trLower } from './text.js';
 import { detectColumnType, buildContext, CLEANERS } from './fields.js';
@@ -61,13 +63,19 @@ export function processTable(headers, rows, decisions = {}) {
 
   const pairs = findPairs(records);
   const answerOf = (p) => decisions.pairs?.[pairKey(p.a, p.b)];
-  const links = pairs.filter((p) => answerOf(p) === true || (p.status === 'sure' && answerOf(p) !== false)).map((p) => [p.a, p.b]);
+  // Kullanıcının "bunlar aynı kişi değil" dediği gruplar: içlerindeki otomatik bağlar kullanılmaz
+  const rejectedRows = new Set(Object.entries(decisions.groups || {}).filter(([, v]) => v === false).flatMap(([k]) => k.split(',').map(Number)));
+  const autoBlocked = (p) => rejectedRows.has(p.a) && rejectedRows.has(p.b);
+  const links = pairs
+    .filter((p) => answerOf(p) === true || (p.status === 'sure' && answerOf(p) !== false && !autoBlocked(p)))
+    .map((p) => [p.a, p.b]);
+  const userRows = new Set(pairs.filter((p) => answerOf(p) === true).flatMap((p) => [p.a, p.b])); // kullanıcı onaylı bağlar
 
   // Aynı isimde birden fazla kişi (grup) varsa: kullanıcı "birleştir" dediyse birleştir, cevap yoksa sor
   const byName = new Map();
   for (const g of buildGroups(rows.length, links)) {
     const key = fold(mostCommon(g.map((r) => records[r].name).filter(Boolean)));
-    if (!key) continue;
+    if (!key || g.every((r) => rejectedRows.has(r))) continue; // kullanıcı zaten "ayrı kişiler" dedi
     if (!byName.has(key)) byName.set(key, []);
     byName.get(key).push(g);
   }
@@ -75,7 +83,10 @@ export function processTable(headers, rows, decisions = {}) {
   for (const [key, sameName] of byName) {
     if (sameName.length < 2) continue;
     const answer = decisions.names?.[key];
-    if (answer === true) for (let i = 1; i < sameName.length; i++) links.push([sameName[0][0], sameName[i][0]]);
+    if (answer === true) {
+      for (let i = 1; i < sameName.length; i++) links.push([sameName[0][0], sameName[i][0]]);
+      sameName.flat().forEach((r) => userRows.add(r));
+    }
     if (answer !== undefined) continue;
     nameQuestions.push({
       kind: 'name',
@@ -174,6 +185,28 @@ export function processTable(headers, rows, decisions = {}) {
     if (!prev || p.score > prev.score) asked.set(groupPair(p), { kind: 'pair', id: `pair|${pairKey(p.a, p.b)}`, ...p, key: pairKey(p.a, p.b) });
   }
 
+  // Otomatik bulunan eşleşmeler: kullanıcı "tek tek göster" dediyse her grup için onay sorulur
+  const groupQuestions = [];
+  if (decisions.review === 'each') {
+    groups.forEach((g, gi) => {
+      if (g.length < 2 || g.some((r) => userRows.has(r))) return;
+      const key = g.join(',');
+      if (decisions.groups?.[key] !== undefined) return;
+      const reasons = new Set();
+      pairs.filter((p) => groupOf[p.a] === gi && groupOf[p.b] === gi).forEach((p) => p.reasons.forEach((x) => reasons.add(x)));
+      groupQuestions.push({
+        kind: 'group',
+        id: `group|${key}`,
+        key,
+        rows: g,
+        proposed: fullName(final[g[0]]),
+        variants: [...new Set(g.map((r) => nameCols.map((c) => String(rows[r][c] ?? '').trim()).filter(Boolean).join(' ')))],
+        reasons: tidyReasons([...reasons]),
+      });
+    });
+  }
+  const pendingGroups = groups.filter((g) => g.length > 1 && !g.some((r) => userRows.has(r)) && decisions.groups?.[g.join(',')] === undefined).length;
+
   const cellQuestions = [];
   const seen = new Set();
   cells.forEach((row, r) => row.forEach((cell, c) => {
@@ -195,7 +228,8 @@ export function processTable(headers, rows, decisions = {}) {
     pairs,
     summaries: multi.map((g) => summarize(g, final, types)),
     // Çelişki soruları önce: kullanıcı "birleştir" deyince hemen ardından "hangisi doğru?" sorulur
-    questions: [...conflictQuestions, ...nameQuestions, ...asked.values(), ...cellQuestions],
+    questions: [...groupQuestions, ...conflictQuestions, ...nameQuestions, ...asked.values(), ...cellQuestions],
+    pendingGroups, // kullanıcının henüz onaylamadığı otomatik eşleşme sayısı
     stats: {
       rows: rows.length,
       people: groups.length,
@@ -227,6 +261,12 @@ export function collapseRows(result, rawRows) {
 }
 
 // ---------- Yardımcılar ----------
+
+// Grup gerekçelerini sadeleştirir: "e-posta aynı" varsa "e-posta neredeyse aynı" gösterilmez, isim için tek ifade kalır
+function tidyReasons(reasons) {
+  const has = (x) => reasons.includes(x);
+  return reasons.filter((x) => !(x === 'e-posta neredeyse aynı' && has('e-posta aynı')) && !(x.startsWith('isim %') && has('isim aynı')));
+}
 
 function mostCommon(values) {
   const counts = new Map();

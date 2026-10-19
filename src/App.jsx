@@ -9,7 +9,8 @@ import Groups from './components/Groups.jsx';
 
 // Bir sayfa için kullanıcının tüm kararları (algoritma bunlarla yeniden çalışır)
 const emptyDecisions = () => ({
-  pairs: {}, names: {}, choices: {}, rules: {}, cells: {}, types: {},
+  pairs: {}, names: {}, choices: {}, rules: {}, cells: {}, types: {}, groups: {},
+  review: undefined, // otomatik eşleşmeler: 'each' = tek tek sor, 'all' = hepsini onayla
   dedupe: null, // null = henüz sorulmadı
   withGroup: false,
   skipped: [],
@@ -64,6 +65,8 @@ export default function App() {
       if (kind === 'choice') d.choices[p.id] = p.value;
       if (kind === 'rule') d.rules[p.col] = { ...d.rules[p.col], [fold(p.original)]: p.value };
       if (kind === 'dedupe') d.dedupe = p;
+      if (kind === 'group') d.groups[p.key] = p.value;
+      if (kind === 'review') d.review = p;
       return d;
     });
   }
@@ -102,8 +105,8 @@ export default function App() {
         <Upload onFile={handleFile} error={error} />
         <p className="samples">
           Dosyanız yok mu? Örnekle deneyin:
-          <button className="link" onClick={() => trySample('Ham_Veri.xlsx')}>Ham_Veri.xlsx</button>
-          <button className="link" onClick={() => trySample('Zor_Ornek.xlsx')}>Zor örnek (unvan, cinsiyet, ağır hatalar)</button>
+          <button className="link" data-tip="Yarışmanın örnek dosyasını (96 satır) yükler" onClick={() => trySample('Ham_Veri.xlsx')}>Ham_Veri.xlsx</button>
+          <button className="link" data-tip="Unvan, cinsiyet, kulüp sütunları ve ağır yazım hataları olan zor bir örnek yükler" onClick={() => trySample('Zor_Ornek.xlsx')}>Zor örnek (unvan, cinsiyet, ağır hatalar)</button>
         </p>
       </main>
     );
@@ -128,23 +131,24 @@ export default function App() {
           {sheet.skipped > 0 && <span className="muted small">Üstteki {sheet.skipped} açıklama satırı atlandı.</span>}
         </div>
         <div className="actions">
-          <label className="check">
+          <label className="check" data-tip="Aynı kişinin tekrar eden kayıtları tabloda ve indirilen dosyada tek satıra iner">
             <input type="checkbox" checked={Boolean(d.dedupe)} onChange={(e) => setOption('dedupe', e.target.checked)} />
             Tekrarları tek satıra indir
           </label>
-          <label className="check">
+          <label className="check" data-tip="İndirilen dosyaya, aynı kişiye ait kayıtların aynı numarayı aldığı bir sütun eklenir">
             <input type="checkbox" checked={d.withGroup} onChange={(e) => setOption('withGroup', e.target.checked)} />
             Grup no sütunu ekle
           </label>
-          <button onClick={() => download('xlsx')}>Excel indir</button>
-          <button onClick={() => download('csv')}>CSV indir</button>
-          <button className="ghost" onClick={reset}>Yeni dosya</button>
+          <button data-tip="Temizlenmiş tabloyu Excel dosyası (.xlsx) olarak indirir" onClick={() => download('xlsx')}>Excel indir</button>
+          <button data-tip="Temizlenmiş tabloyu CSV dosyası olarak indirir" onClick={() => download('csv')}>CSV indir</button>
+          <button className="ghost" data-tip="Bu dosyayı kapatır; bellekte hiçbir iz kalmaz" onClick={reset}>Yeni dosya</button>
         </div>
       </section>
 
       <Assistant
         result={result}
         sheet={sheet}
+        review={d.review}
         dedupe={d.dedupe}
         skipped={d.skipped}
         onAnswer={answer}
@@ -156,17 +160,17 @@ export default function App() {
       />
 
       <nav className="tabs">
-        <button className={tab === 'table' ? 'on' : ''} onClick={() => setTab('table')}>
+        <button className={tab === 'table' ? 'on' : ''} data-tip="Düzeltilmiş tabloyu gösterir; hücreye tıklayıp düzeltebilirsin" onClick={() => setTab('table')}>
           {collapsed ? `Temiz tablo (${collapsed.length} kişi, tekrarlar birleşik)` : `Temiz tablo (${result.stats.rows} satır)`}
         </button>
-        <button className={tab === 'groups' ? 'on' : ''} onClick={() => setTab('groups')}>
+        <button className={tab === 'groups' ? 'on' : ''} data-tip="Aynı kişiye ait olduğunu düşündüğüm kayıtları gerekçeleriyle gösterir" onClick={() => setTab('groups')}>
           Aynı kişiye ait kayıtlar ({result.groups.length})
         </button>
       </nav>
 
       {tab === 'table'
         ? <ResultTable result={result} collapsed={collapsed} onCorrect={correct} onType={setType} />
-        : <Groups result={result} />}
+        : <Groups result={result} confirmed={d.groups} review={d.review} onAnswer={answer} />}
     </main>
   );
 }

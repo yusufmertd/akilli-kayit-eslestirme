@@ -47,14 +47,15 @@ function cellMetrics(rows, cells, expected, cols) {
 }
 
 // Sanal kullanıcı: gerçeği bilir, sistemin sorularını doğru cevaplar. Soru kalmayana kadar devam eder.
-function answerQuestions(headers, rows, personOf, expected) {
-  const d = { pairs: {}, names: {}, choices: {}, rules: {}, cells: {} };
+function answerQuestions(headers, rows, personOf, expected, review) {
+  const d = { pairs: {}, names: {}, choices: {}, rules: {}, cells: {}, groups: {}, review };
   let res = processTable(headers, rows, d);
   let answered = 0;
-  for (let round = 0; round < 80 && res.questions.length; round++) {
+  for (let round = 0; round < 200 && res.questions.length; round++) {
     const q = res.questions[0]; // kullanıcı soruları sırayla cevaplar
     const samePerson = (list) => list.every((r) => personOf[r] === personOf[list[0]]);
     if (q.kind === 'pair') d.pairs[q.key] = personOf[q.a] === personOf[q.b];
+    if (q.kind === 'group') d.groups[q.key] = samePerson(q.rows);
     if (q.kind === 'name') d.names[q.key] = samePerson(q.people.flatMap((p) => p.rows));
     if (q.kind === 'conflict') d.choices[q.id] = samePerson(q.rows) ? expected[q.rows[0]][q.col] : KEEP_OWN;
     if (q.kind === 'cell') d.rules[q.col] = { ...d.rules[q.col], [fold(q.original)]: expected[q.row][q.col] };
@@ -64,9 +65,9 @@ function answerQuestions(headers, rows, personOf, expected) {
   return { res, answered };
 }
 
-function measure(headers, rows, personOf, expected, cols) {
-  const plain = processTable(headers, rows);
-  const { res: asked, answered } = answerQuestions(headers, rows, personOf, expected);
+function measure(headers, rows, personOf, expected, cols, review) {
+  const plain = processTable(headers, rows, { review });
+  const { res: asked, answered } = answerQuestions(headers, rows, personOf, expected, review);
   return {
     rows: rows.length,
     questions: plain.questions.length,
@@ -76,7 +77,7 @@ function measure(headers, rows, personOf, expected, cols) {
   };
 }
 
-function evalSample() {
+function evalSample(review) {
   const wb = XLSX.readFile(`${dir}data/Ham_Veri.xlsx`);
   const [headers, ...rows] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
   const gold = JSON.parse(fs.readFileSync(`${dir}data/Ham_Veri_dogru_gruplar.json`, 'utf8')).gruplar;
@@ -87,7 +88,8 @@ function evalSample() {
   const webRow = {};
   rows.forEach((r) => { if (r[8] === 'Web Başvurusu') webRow[personOfId[r[0]]] = r; });
   const expected = rows.map((r) => webRow[personOfId[r[0]]].map(String));
-  return { name: 'Ham_Veri.xlsx (verilen dosya)', ...measure(headers, rows, personOf, expected, [1, 2, 3, 4, 5, 6, 7]) };
+  const name = review === 'each' ? 'Ham_Veri.xlsx – eşleşmeler tek tek onaylanır' : 'Ham_Veri.xlsx (verilen dosya)';
+  return { name, ...measure(headers, rows, personOf, expected, [1, 2, 3, 4, 5, 6, 7], review) };
 }
 
 function evalSynthetic(name, options, variant = {}, { dropIds = false } = {}) {
@@ -145,6 +147,7 @@ async function evalCsvFixture() {
 
 const results = [
   evalSample(),
+  evalSample('each'),
   evalSynthetic('Sentetik - hafif kirlilik', { level: 0 }),
   evalSynthetic('Sentetik - orta kirlilik', { level: 1 }),
   evalSynthetic('Sentetik - ağır kirlilik', { level: 2 }),

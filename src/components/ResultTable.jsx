@@ -94,12 +94,12 @@ function CellBubble({ cell, header, sameCount, onClose, onSave }) {
       {cell.unsure && (
         <div className="buttons">
           <span className="small">Bu değer doğru mu?</span>
-          <button onClick={() => onSave(cell.value)}>Evet</button>
+          <button data-tip="Değeri onaylar; aynı yazıma sahip tüm hücreler için geçerli olur" onClick={() => onSave(cell.value)}>Evet</button>
         </div>
       )}
       <form onSubmit={(e) => { e.preventDefault(); onSave(value.trim()); }}>
         <input autoFocus value={value} onChange={(e) => setValue(e.target.value)} />
-        <button type="submit">Kaydet</button>
+        <button type="submit" data-tip="Yazdığın değeri kaydeder; aynı yazıma sahip tüm hücrelere uygulanır">Kaydet</button>
       </form>
       {sameCount > 1 && <p className="muted small">Bu yazım {sameCount} hücrede geçiyor; hepsine uygulanır.</p>}
     </div>

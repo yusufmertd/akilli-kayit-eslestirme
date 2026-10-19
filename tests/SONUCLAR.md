@@ -11,6 +11,7 @@ Komut: `npm test` (sentetik testler 5 farklı tohumla üretilir, toplam sonuç v
 | Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
 |---|---|---|---|---|---|---|
 | Ham_Veri.xlsx (verilen dosya) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – eşleşmeler tek tek onaylanır | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
 | Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 38 | **%99.7** / %100.0 (0 yanlış) |
 | Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
 | Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.5** | 79 | **%98.1** / %100.0 (0 yanlış) |

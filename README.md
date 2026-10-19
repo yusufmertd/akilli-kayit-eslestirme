@@ -27,6 +27,11 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
    başlık/açıklama satırı olan tablolar ve Türkçe Windows kodlamalı, `;` ayraçlı CSV'ler de okunur.
 2. Sütun türleri başlıktan, başlık tanıdık değilse **içerikten** tahmin edilir (yanlışsa başlıktaki listeden değiştirilebilir).
 3. **Asistan balonu** özet verir ve emin olamadığı konuları sırayla sorar. Her cevaptan sonra her şey yeniden hesaplanır:
+   - **Önce nasıl ilerleyeceğini sorar:** *"32 kişinin dosyada birden fazla kez geçtiğini buldum. Bu eşleşmeleri nasıl onaylamak
+     istersin?"* → **"Tek tek göster, ben karar vereyim"** veya **"Hepsini onayla, sadece şüphelileri sor"**.
+   - **Tek tek modunda her eşleşme için:** *"Bu 3 kayıt aynı kişiye ait görünüyor: Abmet Dılmaz, Ahmet Yilmaz, Ahmet Yılmaz
+     (neden: telefon aynı, e-posta aynı, kurum aynı…). Hepsini “Ahmet Yılmaz” olarak birleştirip düzelteyim mi?"*
+     → Evet / Hayır, farklı kişiler / Kalanların hepsini onayla. "Hayır" denen kayıtlar birbirinden ayrılır.
    - **Aynı isimde birden fazla kişi:** *"“Ahmet Yılmaz” isminde 2 farklı kişi buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
    - **Birleştirince çelişen bilgiler:** *"Ahmet Yılmaz için farklı Kurum bilgileri var. Hangisi doğru?"*
      → seçenekler, "her kayıt kendi değerini korusun" veya serbest yazım.
@@ -35,6 +40,9 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
      Cevap aynı yazıma sahip **tüm** hücrelere uygulanır.
    - **Son soru:** *"Her kişi tek satır olsun mu?"*
    - "Şimdilik atla" ve "Son cevabı geri al" her zaman kullanılabilir.
+   - **Her butonun üzerine gelince** ne işe yaradığını anlatan kısa bir açıklama çıkar.
+   - "Aynı kişiye ait kayıtlar" sekmesinde her grup gerekçesiyle listelenir; **"Doğru, aynı kişi"** / **"Ayır, farklı kişiler"**
+     butonlarıyla sonradan da karar değiştirilebilir.
 4. Tabloda **yeşil** = düzeltildi, **mavi** = aynı kişinin diğer kaydından dolduruldu, **sarı** = emin değilim.
    Bir hücreye tıklayınca **hücre balonu** açılır: dosyadaki eski hâli, değişiklik gerekçesi, "doğru mu?" onayı ve düzeltme kutusu.
 5. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
@@ -137,6 +145,7 @@ tohumla çalıştırılır.
 | Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
 |---|---|---|---|---|---|---|
 | Ham_Veri.xlsx (verilen dosya) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – eşleşmeler tek tek onaylanır | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
 | Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 38 | **%99.7** / %100.0 (0 yanlış) |
 | Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
 | Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.5** | 79 | **%98.1** / %100.0 (0 yanlış) |

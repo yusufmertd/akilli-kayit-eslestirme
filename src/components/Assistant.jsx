@@ -4,13 +4,15 @@ import { fold } from '../engine/text.js';
 
 // Asistan baloncuğu: algoritmanın emin olamadığı konuları kullanıcıya TEK TEK sorar.
 // Her cevaptan sonra algoritma yeniden çalışır ve sıradaki soru gelir.
-export default function Assistant({ result, sheet, dedupe, skipped, onAnswer, onSkip, onUnskipAll, onUndo, canUndo, onDownload }) {
+export default function Assistant({ result, sheet, review, dedupe, skipped, onAnswer, onSkip, onUnskipAll, onUndo, canUndo, onDownload }) {
   const queue = result.questions.filter((q) => !skipped.includes(q.id));
   const q = queue[0];
   const { stats } = result;
+  const askMode = review === undefined && result.pendingGroups > 0; // önce "nasıl ilerleyelim?" sorulur
 
   let body;
-  if (q) body = <Question key={q.id} q={q} result={result} sheet={sheet} onAnswer={onAnswer} />;
+  if (askMode) body = <ReviewModeQuestion count={result.pendingGroups} onAnswer={onAnswer} />;
+  else if (q) body = <Question key={q.id} q={q} result={result} sheet={sheet} onAnswer={onAnswer} />;
   else if (dedupe === null && stats.duplicates > 0) body = <DedupeQuestion stats={stats} onAnswer={onAnswer} />;
   else body = <Done stats={stats} dedupe={dedupe} skippedCount={skipped.length} onUnskipAll={onUnskipAll} onDownload={onDownload} />;
 
@@ -23,21 +25,69 @@ export default function Assistant({ result, sheet, dedupe, skipped, onAnswer, on
         <p className="intro">
           {stats.rows} satırı inceledim: <b>{stats.fixed}</b> hücreyi düzelttim, <b>{stats.filled}</b> boş hücreyi
           doldurdum, <b>{stats.people}</b> farklı kişi buldum.
-          {queue.length > 0 && <> Emin olamadığım <b>{queue.length}</b> konu var, sırayla soruyorum.</>}
+          {!askMode && queue.length > 0 && <> Sana soracağım <b>{queue.length}</b> konu var, sırayla soruyorum.</>}
         </p>
         {body}
         <div className="bubble-footer">
-          {q && <button className="link" onClick={() => onSkip(q.id)}>Şimdilik atla</button>}
-          {canUndo && <button className="link" onClick={onUndo}>Son cevabı geri al</button>}
+          {q && !askMode && (
+            <button className="link" data-tip="Bu soruyu sona bırakır; algoritmanın tahmini şimdilik kalır" onClick={() => onSkip(q.id)}>Şimdilik atla</button>
+          )}
+          {canUndo && <button className="link" data-tip="Verdiğin son cevabı iptal eder, önceki duruma döner" onClick={onUndo}>Son cevabı geri al</button>}
         </div>
       </div>
     </section>
   );
 }
 
+// Otomatik eşleşmeleri kullanıcı tek tek mi onaylamak ister, yoksa hepsine güvenir mi?
+function ReviewModeQuestion({ count, onAnswer }) {
+  return (
+    <div className="ask">
+      <p>
+        Telefon, e-posta, kurum ve adres bilgilerine bakarak <b>{count} kişinin</b> dosyada birden fazla kez
+        (farklı yazımlarla) geçtiğini buldum. Örneğin “Abmet Dılmaz” ile “Ahmet Yılmaz” aynı kişi olabilir.
+      </p>
+      <p>Bu eşleşmeleri nasıl onaylamak istersin?</p>
+      <div className="buttons">
+        <button data-tip="Her eşleşmeyi tek tek gösteririm; sen 'birleştir' ya da 'ayrı kişiler' dersin" onClick={() => onAnswer('review', 'each')}>
+          Tek tek göster, ben karar vereyim
+        </button>
+        <button className="ghost" data-tip="Bulduğum eşleşmelerin hepsini kabul ederim; sadece emin olmadığım durumları sorarım" onClick={() => onAnswer('review', 'all')}>
+          Hepsini onayla, sadece şüphelileri sor
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Question({ q, result, sheet, onAnswer }) {
   const header = (c) => result.headers[c];
   const nameCol = result.types.indexOf('name');
+
+  if (q.kind === 'group') {
+    return (
+      <div className="ask">
+        <p>Bu <b>{q.rows.length} kayıt</b> aynı kişiye ait görünüyor:</p>
+        <ul className="people">
+          {q.variants.map((v) => <li key={v}>{v}</li>)}
+        </ul>
+        <p className="muted small">Neden: {q.reasons.join(', ')}</p>
+        <RawRows rows={q.rows} result={result} sheet={sheet} />
+        <p>Hepsini <b>“{q.proposed}”</b> olarak birleştirip düzelteyim mi?</p>
+        <div className="buttons">
+          <button data-tip="Bu kayıtlar tek kişi sayılır; yazımlar düzeltilir, eksik bilgiler birbirinden tamamlanır" onClick={() => onAnswer('group', { key: q.key, value: true })}>
+            Evet, birleştir
+          </button>
+          <button className="ghost" data-tip="Bu kayıtlar birbirinden ayrılır; her biri ayrı kişi olarak kalır" onClick={() => onAnswer('group', { key: q.key, value: false })}>
+            Hayır, bunlar farklı kişiler
+          </button>
+          <button className="link" data-tip="Kalan tüm otomatik eşleşmeleri kabul eder, bir daha bunları sormam" onClick={() => onAnswer('review', 'all')}>
+            Kalanların hepsini onayla
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (q.kind === 'name') {
     return (
@@ -48,8 +98,8 @@ function Question({ q, result, sheet, onAnswer }) {
         </ul>
         <p>Bunlar aynı kişi mi? Birleştireyim mi?</p>
         <div className="buttons">
-          <button onClick={() => onAnswer('name', { key: q.key, value: true })}>Evet, aynı kişi — birleştir</button>
-          <button className="ghost" onClick={() => onAnswer('name', { key: q.key, value: false })}>Hayır, farklı kişiler</button>
+          <button data-tip="Bu kişiler tek kişi sayılır; farklı olan bilgiler için 'hangisi doğru?' diye sorarım" onClick={() => onAnswer('name', { key: q.key, value: true })}>Evet, aynı kişi — birleştir</button>
+          <button className="ghost" data-tip="Aynı isimli ama farklı kişiler olarak ayrı kalırlar" onClick={() => onAnswer('name', { key: q.key, value: false })}>Hayır, farklı kişiler</button>
         </div>
       </div>
     );
@@ -61,8 +111,8 @@ function Question({ q, result, sheet, onAnswer }) {
         <p>Bu iki kayıt <b>aynı kişiye</b> ait olabilir <span className="muted">(benzerlik %{q.score}: {q.reasons.join(', ')})</span>:</p>
         <RawRows rows={[q.a, q.b]} result={result} sheet={sheet} />
         <div className="buttons">
-          <button onClick={() => onAnswer('pair', { key: q.key, value: true })}>Evet, aynı kişi</button>
-          <button className="ghost" onClick={() => onAnswer('pair', { key: q.key, value: false })}>Hayır, farklı kişiler</button>
+          <button data-tip="İki kayıt tek kişi sayılır, bilgileri birbirinden tamamlanır" onClick={() => onAnswer('pair', { key: q.key, value: true })}>Evet, aynı kişi</button>
+          <button className="ghost" data-tip="Kayıtlar ayrı kalır, bu iki kayıt için bir daha sormam" onClick={() => onAnswer('pair', { key: q.key, value: false })}>Hayır, farklı kişiler</button>
         </div>
       </div>
     );
@@ -77,11 +127,11 @@ function Question({ q, result, sheet, onAnswer }) {
         </p>
         <div className="buttons vertical">
           {q.options.map((o) => (
-            <button key={o.value} onClick={() => onAnswer('choice', { id: q.id, value: o.value })}>
+            <button key={o.value} data-tip="Bu kişinin tüm kayıtlarına bu değer yazılır" onClick={() => onAnswer('choice', { id: q.id, value: o.value })}>
               {o.value} <small>({o.count} kayıtta)</small>
             </button>
           ))}
-          <button className="ghost" onClick={() => onAnswer('choice', { id: q.id, value: KEEP_OWN })}>Her kayıt kendi değerini korusun</button>
+          <button className="ghost" data-tip="Değerler eşitlenmez; her satır kendi (düzeltilmiş) değeriyle kalır" onClick={() => onAnswer('choice', { id: q.id, value: KEEP_OWN })}>Her kayıt kendi değerini korusun</button>
         </div>
         <FreeText label="Hiçbiri değil, doğrusu:" initial="" onSave={(v) => onAnswer('choice', { id: q.id, value: v })} />
       </div>
@@ -97,7 +147,7 @@ function Question({ q, result, sheet, onAnswer }) {
         {q.suggestion !== q.original ? <> Doğru yazımı <q><b>{q.suggestion}</b></q> olabilir mi?</> : ' Bu yazım doğru mu?'}
       </p>
       <div className="buttons">
-        <button onClick={() => onAnswer('rule', { col: q.col, original: q.original, value: q.suggestion })}>Evet, doğru</button>
+        <button data-tip="Önerim onaylanır ve aynı yazıma sahip tüm hücrelere uygulanır" onClick={() => onAnswer('rule', { col: q.col, original: q.original, value: q.suggestion })}>Evet, doğru</button>
       </div>
       <FreeText label="Hayır, doğrusu:" initial={q.suggestion} onSave={(v) => onAnswer('rule', { col: q.col, original: q.original, value: v })} />
       {sameCount > 1 && <p className="muted small">Cevabın bu yazıma sahip {sameCount} hücrenin hepsine uygulanacak.</p>}
@@ -113,8 +163,8 @@ function DedupeQuestion({ stats, onAnswer }) {
         İndireceğin dosyada her kişi <b>tek satır</b> olsun mu?
       </p>
       <div className="buttons">
-        <button onClick={() => onAnswer('dedupe', true)}>Evet, her kişi tek satır ({stats.people} satır)</button>
-        <button className="ghost" onClick={() => onAnswer('dedupe', false)}>Hayır, tüm satırlar kalsın ({stats.rows} satır)</button>
+        <button data-tip="Aynı kişinin tekrar eden kayıtları indirilen dosyada tek satıra iner" onClick={() => onAnswer('dedupe', true)}>Evet, her kişi tek satır ({stats.people} satır)</button>
+        <button className="ghost" data-tip="Satır sayısı değişmez, sadece yazımlar düzeltilir" onClick={() => onAnswer('dedupe', false)}>Hayır, tüm satırlar kalsın ({stats.rows} satır)</button>
       </div>
     </div>
   );
@@ -128,9 +178,9 @@ function Done({ stats, dedupe, skippedCount, onUnskipAll, onDownload }) {
         Tabloda bir hücreye tıklayarak istediğin düzeltmeyi yapabilirsin.
       </p>
       <div className="buttons">
-        <button onClick={() => onDownload('xlsx')}>Excel indir (.xlsx)</button>
-        <button onClick={() => onDownload('csv')}>CSV indir</button>
-        {skippedCount > 0 && <button className="ghost" onClick={onUnskipAll}>Atladığım {skippedCount} soruya dön</button>}
+        <button data-tip="Temizlenmiş tabloyu Excel dosyası olarak bilgisayarına indirir" onClick={() => onDownload('xlsx')}>Excel indir (.xlsx)</button>
+        <button data-tip="Temizlenmiş tabloyu CSV (virgülle ayrılmış metin) olarak indirir" onClick={() => onDownload('csv')}>CSV indir</button>
+        {skippedCount > 0 && <button className="ghost" data-tip="Atladığın soruları yeniden sormaya başlarım" onClick={onUnskipAll}>Atladığım {skippedCount} soruya dön</button>}
       </div>
     </div>
   );
@@ -142,7 +192,7 @@ function FreeText({ label, initial, onSave }) {
     <form className="free" onSubmit={(e) => { e.preventDefault(); if (value.trim()) onSave(value.trim()); }}>
       <label>{label}</label>
       <input value={value} onChange={(e) => setValue(e.target.value)} placeholder="Doğru yazımı girin" />
-      <button type="submit" className="ghost">Kaydet</button>
+      <button type="submit" className="ghost" data-tip="Yazdığın değer kaydedilir ve tabloya uygulanır">Kaydet</button>
     </form>
   );
 }
