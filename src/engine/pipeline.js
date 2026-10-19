@@ -145,7 +145,7 @@ export function processTable(headers, rows, decisions = {}) {
           const best = longestValue(cands, type, chosenName);
           for (const r of group) {
             const own = cleaned[r][col];
-            const note = !own ? 'aynı kişinin diğer kaydından dolduruldu' : clusters.length > 1 ? 'en uzun (en ayrıntılı) ad seçildi' : best.note || 'grup içi oylama';
+            const note = !own ? 'eşleşen kayıttan dolduruldu' : clusters.length > 1 ? 'en uzun (en ayrıntılı) ad seçildi' : best.note || 'grup içi oylama';
             final[r][col] = { ...best, sure: true, note };
           }
           continue;
@@ -155,14 +155,14 @@ export function processTable(headers, rows, decisions = {}) {
         // ("ahmet.yilmaz@..." tercih edilir, "ref16", "test", çok rakamlı adresler geri planda kalır)
         if (type === 'email' && clusters.length > 1 && choice === undefined) {
           const best = bestEmail(cands, chosenName);
-          for (const r of group) final[r][col] = { ...best, sure: true, note: cleaned[r][col] ? 'kişinin gerçek e-postası seçildi' : 'aynı kişinin diğer kaydından dolduruldu' };
+          for (const r of group) final[r][col] = { ...best, sure: true, note: cleaned[r][col] ? 'gerçek adres biçimindeki e-posta seçildi' : 'eşleşen kayıttan dolduruldu' };
           continue;
         }
 
         // Diğer çelişkiler: manuel modda sorulur, diğer modlarda çoğunluğun değeri seçilir
         if (clusters.length > 1 && choice === undefined && !manual) {
           const best = pickBest(cands, type, chosenName);
-          for (const r of group) final[r][col] = { ...best, sure: true, note: cleaned[r][col] ? 'otomatik seçildi (çoğunluk)' : 'aynı kişinin diğer kaydından dolduruldu' };
+          for (const r of group) final[r][col] = { ...best, sure: true, note: cleaned[r][col] ? 'otomatik seçildi (çoğunluk)' : 'eşleşen kayıttan dolduruldu' };
           continue;
         }
 
@@ -172,7 +172,7 @@ export function processTable(headers, rows, decisions = {}) {
             const own = cleaned[r][col];
             if (!own) continue;
             const best = pickBest(clusters.find((cl) => cl.includes(own)), type, chosenName);
-            final[r][col] = { ...best, sure: false, note: 'aynı kişide farklı değerler var, size soruldu' };
+            final[r][col] = { ...best, sure: false, note: 'eşleşen satırlarda farklı değerler var, size soruldu' };
           }
           conflictQuestions.push({
             kind: 'conflict',
@@ -191,7 +191,7 @@ export function processTable(headers, rows, decisions = {}) {
           : pickBest(cands, type, chosenName);
         for (const r of group) {
           const own = cleaned[r][col];
-          final[r][col] = { ...best, note: own ? best.note || 'grup içi oylama' : 'aynı kişinin diğer kaydından dolduruldu' };
+          final[r][col] = { ...best, note: own ? best.note || 'grup içi oylama' : 'eşleşen kayıttan dolduruldu' };
         }
       }
       if (type === 'name') chosenName = fullName(final[anchor]);
@@ -288,7 +288,7 @@ export function processTable(headers, rows, decisions = {}) {
   const seen = new Set();
   cells.forEach((row, r) => row.forEach((cell, c) => {
     if (!manual) return; // emin olunamayan yazımlar sadece manuel modda sorulur (diğerlerinde öneri uygulanır)
-    if (!cell.unsure || !cell.original || cell.note.startsWith('aynı kişide')) return;
+    if (!cell.unsure || !cell.original || cell.note.startsWith('eşleşen satırlarda')) return;
     const id = `cell|${c}|${fold(cell.original)}`;
     if (seen.has(id)) return;
     seen.add(id);

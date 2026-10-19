@@ -31,11 +31,11 @@ const GROUPS = [
   ['Biçimler', [
     ['phoneFormat', 'Telefon biçimi', 'Tüm telefon numaraları bu biçime getirilir', [['spaced', '0555 100 00 01'], ['plain', '05551000001'], ['intl', '+90 555 100 00 01']]],
     ['dateFormat', 'Tarih biçimi', 'Tüm tarih sütunları bu biçime getirilir', [['dmy', '05.03.1998'], ['iso', '1998-03-05'], ['slash', '05/03/1998']]],
-    ['humanEmail', 'E-postaları gerçek kişi biçimine getir', 'Teknik/sistem ekleri kaldırılır: ece.demirci.ref27@… → ece.demirci@…, ali+bulten@… → ali@…, test.zeynep@… → zeynep@…', 'bool'],
+    ['humanEmail', 'E-postaları gerçek adres biçimine getir', 'Teknik/sistem ekleri kaldırılır: ece.demirci.ref27@… → ece.demirci@…, ali+bulten@… → ali@…, test.zeynep@… → zeynep@…', 'bool'],
   ]],
   ['İndirme', [
     ['csvSep', 'CSV ayırıcısı', 'Türkçe Excel CSV dosyalarını genelde noktalı virgülle açar', [[',', 'Virgül ( , )'], [';', 'Noktalı virgül ( ; )']]],
-    ['withGroup', 'Grup no sütunu ekle', 'Aynı kişiye ait kayıtlar aynı numarayı alır', 'bool'],
+    ['withGroup', 'Grup no sütunu ekle', 'Eşleşen kayıtlar aynı numarayı alır', 'bool'],
     ['changeReport', 'Excel\'e "Değişiklikler" sayfası ekle', 'Hangi hücrenin neden değiştiğini satır satır listeleyen ek bir sayfa', 'bool'],
   ]],
 ];

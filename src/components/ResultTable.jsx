@@ -4,7 +4,7 @@ import { CATEGORY_GROUPS, categoryOf } from '../engine/categories.js';
 
 const GROUP_LABELS = { Kişi: 'Kişi bilgileri', İletişim: 'İletişim', Eğitim: 'Eğitim', İş: 'İş', Kayıt: 'Kayıt / Etkinlik', Genel: 'Genel biçimler', Diğer: 'Diğer' };
 
-const STATUS_TEXT = { fixed: 'Düzeltildi', filled: 'Aynı kişinin diğer kaydından dolduruldu', same: 'Değişmedi' };
+const STATUS_TEXT = { fixed: 'Düzeltildi', filled: 'Eşleşen kayıttan dolduruldu', same: 'Değişmedi' };
 
 // collapsed: tekrarlar birleşik görünümde [{ row, values }] (yoksa tüm satırlar gösterilir)
 export default function ResultTable({ result, collapsed, onCorrect, onType }) {
@@ -24,7 +24,7 @@ export default function ResultTable({ result, collapsed, onCorrect, onType }) {
         <table className="result">
           <thead>
             <tr>
-              <th title="Aynı kişiye ait kayıtlar aynı grup numarasını alır">Kişi</th>
+              <th title="Eşleşen (aynı) kayıtlar aynı grup numarasını alır">Grup</th>
               {result.headers.map((h, c) => (
                 <th key={c}>
                   {h}

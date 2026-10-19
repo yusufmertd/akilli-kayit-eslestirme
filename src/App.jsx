@@ -130,8 +130,8 @@ export default function App() {
         <Upload onFile={handleFile} error={error} />
         <p className="samples">
           Dosyanız yok mu? Örnekle deneyin:
-          <button className="link" data-tip="Yarışmanın örnek dosyasını (96 satır) yükler" onClick={() => trySample('Ham_Veri.xlsx')}>Ham_Veri.xlsx</button>
-          <button className="link" data-tip="Unvan, cinsiyet, kulüp sütunları ve ağır yazım hataları olan zor bir örnek yükler" onClick={() => trySample('Zor_Ornek.xlsx')}>Zor örnek (unvan, cinsiyet, ağır hatalar)</button>
+          <button className="link" data-tip="Yazım hatalı ve tekrar eden kayıtlar içeren 96 satırlık bir örnek yükler" onClick={() => trySample('Ham_Veri.xlsx')}>Örnek tablo</button>
+          <button className="link" data-tip="Çok sütunlu ve ağır yazım hataları olan zor bir örnek yükler" onClick={() => trySample('Zor_Ornek.xlsx')}>Zor örnek (ağır hatalar)</button>
           <button className="link" data-tip="Sütun başlıkları 'Sütun 1, Sütun 2…' olan bir dosya: site her sütunun ne olduğunu içeriğinden tanır" onClick={() => trySample('Basliksiz_Ornek.xlsx')}>Başlıksız örnek (içerikten tanıma)</button>
         </p>
       </Page>
@@ -156,11 +156,11 @@ export default function App() {
           {sheet.skipped > 0 && <span className="muted small">Üstteki {sheet.skipped} açıklama satırı atlandı.</span>}
         </div>
         <div className="actions">
-          <label className="check" data-tip="Aynı kişinin tekrar eden kayıtları tabloda ve indirilen dosyada tek satıra iner">
+          <label className="check" data-tip="Tekrar eden (aynı) kayıtlar tabloda ve indirilen dosyada tek satıra iner">
             <input type="checkbox" checked={Boolean(d.dedupe)} onChange={(e) => setOption('dedupe', e.target.checked)} />
             Tekrarları tek satıra indir
           </label>
-          <label className="check" data-tip="İndirilen dosyaya, aynı kişiye ait kayıtların aynı numarayı aldığı bir sütun eklenir">
+          <label className="check" data-tip="İndirilen dosyaya, eşleşen kayıtların aynı numarayı aldığı bir sütun eklenir">
             <input type="checkbox" checked={d.withGroup} onChange={(e) => setOption('withGroup', e.target.checked)} />
             Grup no sütunu ekle
           </label>
@@ -188,10 +188,10 @@ export default function App() {
 
       <nav className="tabs">
         <button className={tab === 'table' ? 'on' : ''} data-tip="Düzeltilmiş tabloyu gösterir; hücreye tıklayıp düzeltebilirsin" onClick={() => setTab('table')}>
-          {collapsed ? `Temiz tablo (${collapsed.length} kişi, tekrarlar birleşik)` : `Temiz tablo (${result.stats.rows} satır)`}
+          {collapsed ? `Temiz tablo (${collapsed.length} satır, tekrarlar birleşik)` : `Temiz tablo (${result.stats.rows} satır)`}
         </button>
-        <button className={tab === 'groups' ? 'on' : ''} data-tip="Aynı kişiye ait olduğunu düşündüğüm kayıtları gerekçeleriyle gösterir" onClick={() => setTab('groups')}>
-          Aynı kişiye ait kayıtlar ({result.groups.length})
+        <button className={tab === 'groups' ? 'on' : ''} data-tip="Aynı kayda ait olduğunu düşündüğüm satırları gerekçeleriyle gösterir" onClick={() => setTab('groups')}>
+          Eşleşen kayıtlar ({result.groups.length})
         </button>
       </nav>
 
@@ -205,7 +205,7 @@ export default function App() {
 // Soru sorma düzeyi: kullanıcı ne kadar karar vermek istediğini seçer
 export const MODES = [
   ['auto', '1. Otomatik', 'Hiç soru sormaz: eşleşmeleri, yazım düzeltmelerini ve çelişkileri algoritma çözer. Emin olmadığı eşleşmeleri birleştirmez.'],
-  ['suspicious', '2. Ayıklama', 'Önerilen: şüpheli durumları ayıklar ve sadece onları sorar (aynı isimli kişiler, şüpheli kayıt çiftleri). Gerisini kendisi düzeltir.'],
+  ['suspicious', '2. Ayıklama', 'Önerilen: şüpheli durumları ayıklar ve sadece onları sorar (aynı adlı farklı kayıtlar, şüpheli kayıt çiftleri). Gerisini kendisi düzeltir.'],
   ['manual', '3. Manuel', 'Her eşleşmeyi, her çelişkiyi ve emin olamadığı her yazımı tek tek sorar.'],
 ];
 function ModeSwitch({ mode, onChange }) {
@@ -226,9 +226,9 @@ function Page({ nav, children }) {
     <main className="page">
       <header className="header">
         <div>
-          <h1>Akıllı Kayıt Eşleştirme</h1>
+          <h1>Tablo Düzeltici</h1>
           <p>
-            Üniversite kayıt listelerindeki yazım hatalarını düzeltir, aynı kişiye ait kayıtları bulur, emin olamadığında size sorar.
+            Her türlü Excel ve CSV tablosundaki yazım hatalarını düzeltir, aynı kaydın farklı yazımlarını bulur, emin olamadığında size sorar.
             <span className="privacy"> Dosyanız tarayıcınızdan çıkmaz, hiçbir yerde saklanmaz.</span>
           </p>
         </div>

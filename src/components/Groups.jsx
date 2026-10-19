@@ -1,6 +1,6 @@
 import { fold } from '../engine/text.js';
 
-// Aynı kişiye ait olduğu tespit edilen kayıt grupları ve gerekçeleri
+// Aynı kayda ait olduğu tespit edilen satır grupları ve gerekçeleri
 export default function Groups({ result, confirmed, manual, onAnswer }) {
   const nameCols = result.types.flatMap((t, c) => (t === 'name' ? [c] : []));
   const nameOf = (r) => nameCols.map((c) => result.cells[r][c].value).filter(Boolean).join(' ');
@@ -14,25 +14,25 @@ export default function Groups({ result, confirmed, manual, onAnswer }) {
     return [...reasons].join(', ') || 'sizin onayınızla birleştirildi';
   };
 
-  if (!result.groups.length) return <p className="muted">Aynı kişiye ait birden fazla kayıt bulunamadı.</p>;
+  if (!result.groups.length) return <p className="muted">Tekrar eden (eşleşen) kayıt bulunamadı.</p>;
 
   return (
     <div className="groups">
       {result.groups.map((group, i) => (
         <div key={group[0]} className="group-card">
           <h3>
-            {i + 1}. {nameOf(group[0]) || 'Kişi'}
+            {i + 1}. {nameOf(group[0]) || 'Kayıt'}
             <small> · {result.summaries[i]}</small>
-            {nameCount.get(fold(nameOf(group[0]))) > 1 && <span className="badge">Aynı isimde başka kişi de var</span>}
+            {nameCount.get(fold(nameOf(group[0]))) > 1 && <span className="badge">Aynı adda başka kayıt da var</span>}
             {confirmed[group.join(',')] === true && <span className="badge ok">Onaylandı</span>}
             {confirmed[group.join(',')] !== true && (manual
               ? <span className="badge">Onay bekliyor</span>
               : <span className="badge ok">Otomatik eşleşti</span>)}
           </h3>
-          <p className="muted">Neden aynı kişi: {reasonsOf(group)}</p>
+          <p className="muted">Neden aynı kayıt: {reasonsOf(group)}</p>
           <div className="buttons">
-            <button data-tip="Bu kayıtların aynı kişi olduğunu onaylarsın" onClick={() => onAnswer('group', { key: group.join(','), value: true })}>Doğru, aynı kişi</button>
-            <button className="ghost" data-tip="Bu kayıtları birbirinden ayırır; her biri ayrı kişi olarak kalır" onClick={() => onAnswer('group', { key: group.join(','), value: false })}>Ayır, farklı kişiler</button>
+            <button data-tip="Bu satırların aynı kayıt olduğunu onaylarsın" onClick={() => onAnswer('group', { key: group.join(','), value: true })}>Doğru, aynı kayıt</button>
+            <button className="ghost" data-tip="Bu satırları birbirinden ayırır; her biri ayrı kayıt olarak kalır" onClick={() => onAnswer('group', { key: group.join(','), value: false })}>Ayır, farklı kayıtlar</button>
           </div>
           <div className="mini-wrap">
             <table className="mini">

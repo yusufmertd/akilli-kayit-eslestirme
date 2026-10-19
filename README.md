@@ -1,25 +1,29 @@
-# Akıllı Kayıt Eşleştirme Sistemi
+# Tablo Düzeltici
 
 **Canlı uygulama:** https://akilli-kayit-eslestirme.vercel.app
 
-Üniversite kayıt listelerindeki (öğrenci / katılımcı tabloları) yazım hatalarını düzelten, aynı kişiye ait
-farklı yazılmış kayıtları bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren web uygulaması.
+Her türlü Excel ve CSV tablosundaki yazım hatalarını düzelten, aynı kaydın farklı yazımlarını (tekrar eden satırları)
+bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren ücretsiz web aracı. Müşteri, öğrenci, personel,
+ürün, adres, etkinlik listeleri… belirli bir sektöre ya da kesime özel değildir.
 
 ```
-Abmet Dılmaz │ Uludag Universitesi │ Bilgisayar Muhendisligi │ No.8 - Yeni Mahallesi / Bilim Caddesi
+AHMET  YILMAZ │ ahmet.yilmaz@gma.il │ O555 100-0001  │ yeni mah bilim cad no 8 │ ist.
         ↓
-Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni Mahallesi, Bilim Caddesi No: 8
+Ahmet Yılmaz  │ ahmet.yilmaz@gmail.com │ 0555 100 00 01 │ Yeni Mahallesi, Bilim Caddesi No: 8 │ İstanbul
 ```
 
-- **Konu:** Türkiye'deki üniversiteler: ad soyad (tek veya ayrı sütun), üniversite, fakülte, bölüm, unvan,
-  öğrenim düzeyi, cinsiyet, e-posta, telefon, adres, şehir, tarih. Bilinmeyen sütunlar da genel kurallarla temizlenir.
+- **Kapsam:** 58 sütun kategorisi (ad soyad, e-posta, telefon, adres, şehir, tarih, kurum, şirket, bölüm, unvan, para,
+  yüzde, IBAN, plaka…). Başlıktan ya da içerikten tanınır; tanınmayan sütunlara genel kurallar uygulanır.
+  Türkçe sözlükler (81 il, yaygın adlar, kurum ve üniversite adları, unvanlar, ülkeler, diller) yerleşik gelir.
 - **Teknoloji:** React + Vite, JavaScript, Excel okuma/yazma için SheetJS
 - **Gizlilik:** Dosya tarayıcıdan hiç çıkmaz. Sunucu yok, veritabanı yok, `localStorage` yok.
   Dosya yalnızca sayfanın belleğinde işlenir; sayfa kapanınca hiçbir iz kalmaz.
-- **Kullanıcı merkezli:** Algoritma emin olamadığı her konuyu bir **asistan balonunda tek tek sorar**
-  ("Bunlar aynı kişi mi?", "Hangi üniversite doğru?", "Doğru yazımı bu mu?"). Kararlar kullanıcınındır.
-- **Satırlar:** Varsayılan olarak tüm satırlar korunur, sadece yazımlar düzeltilir. Kullanıcı isterse
-  aynı kişinin tekrar eden kayıtları tek satıra indirilir.
+- **Kullanıcı merkezli:** Emin olamadığı konuları bir **asistan balonunda** sorar ("Bunlar aynı kayıt mı?",
+  "Hangisi doğru?"). Ne kadar soru sorulacağını kullanıcı seçer (1. Otomatik · 2. Ayıklama · 3. Manuel).
+- **Satırlar:** Varsayılan olarak tüm satırlar korunur, sadece yazımlar düzeltilir. İstenirse tekrar eden kayıtlar
+  tek satıra indirilir.
+- **Test verisi:** Geliştirme ve ölçüm için verilen örnek dosya (`tests/data/Ham_Veri.xlsx`, öğrenci kayıtları) ve
+  farklı biçimlerde üretilmiş sentetik tablolar kullanıldı (aşağıda "Test sonuçları").
 
 ## Kullanım
 
@@ -58,7 +62,7 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
    - **3. Manuel modda her eşleşme için:** *"Bu 3 kayıt aynı kişiye ait görünüyor: Abmet Dılmaz, Ahmet Yilmaz, Ahmet Yılmaz
      (neden: telefon aynı, e-posta aynı, kurum aynı…). Hepsini “Ahmet Yılmaz” olarak birleştirip düzelteyim mi?"*
      → Evet / Hayır, farklı kişiler / Kalanların hepsini onayla. "Hayır" denen kayıtlar birbirinden ayrılır.
-   - **Aynı isimde birden fazla kişi:** *"“Ahmet Yılmaz” isminde 2 farklı kişi buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
+   - **Aynı adda birden fazla kayıt:** *"“Ahmet Yılmaz” adında 2 farklı kayıt buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
    - **Birleştirince çelişen bilgiler (3. Manuel modda):** *"Ahmet Yılmaz için farklı Telefon bilgileri var. Hangisi doğru?"*
      Diğer modlarda çoğunluğun değeri seçilir.
      → seçenekler, "her kayıt kendi değerini korusun" veya serbest yazım.

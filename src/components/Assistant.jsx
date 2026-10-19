@@ -6,7 +6,7 @@ import { fold } from '../engine/text.js';
 // Her cevaptan sonra algoritma yeniden çalışır ve sıradaki soru gelir.
 const MODE_TEXT = {
   auto: '1. Otomatik moddayım: tüm kararları ben verdim, hiçbir şey sormuyorum.',
-  suspicious: '2. Ayıklama modundayım: sadece şüpheli eşleşmeleri ayıklayıp soruyorum; yazım hatalarını, kurum/fakülte ve e-posta seçimini kendim yaptım.',
+  suspicious: '2. Ayıklama modundayım: sadece şüpheli eşleşmeleri ayıklayıp soruyorum; yazım hatalarını ve tekrar eden kayıtlardaki değer seçimini kendim yaptım.',
   manual: '3. Manuel moddayım: her eşleşmeyi ve her çelişkiyi sana soruyorum.',
 };
 
@@ -28,7 +28,7 @@ export default function Assistant({ result, sheet, mode, dedupe, skipped, onAnsw
       <div className="bubble">
         <p className="intro">
           {stats.rows} satırı inceledim: <b>{stats.fixed}</b> hücreyi düzelttim, <b>{stats.filled}</b> boş hücreyi
-          doldurdum, <b>{stats.people}</b> farklı kişi buldum.
+          doldurdum, <b>{stats.people}</b> benzersiz kayıt buldum.
           {' '}{MODE_TEXT[mode]}
           {queue.length > 0 && <> Sana soracağım <b>{queue.length}</b> konu var.</>}
         </p>
@@ -51,7 +51,7 @@ function Question({ q, result, sheet, onAnswer }) {
   if (q.kind === 'group') {
     return (
       <div className="ask">
-        <p>Bu <b>{q.rows.length} kayıt</b> aynı kişiye ait görünüyor:</p>
+        <p>Bu <b>{q.rows.length} satır</b> aynı kayda ait görünüyor:</p>
         <ul className="people">
           {q.variants.map((v) => <li key={v}>{v}</li>)}
         </ul>
@@ -59,11 +59,11 @@ function Question({ q, result, sheet, onAnswer }) {
         <RawRows rows={q.rows} result={result} sheet={sheet} />
         <p>Hepsini <b>“{q.proposed}”</b> olarak birleştirip düzelteyim mi?</p>
         <div className="buttons">
-          <button data-tip="Bu kayıtlar tek kişi sayılır; yazımlar düzeltilir, eksik bilgiler birbirinden tamamlanır" onClick={() => onAnswer('group', { key: q.key, value: true })}>
+          <button data-tip="Bu satırlar tek kayıt sayılır; yazımlar düzeltilir, eksik bilgiler birbirinden tamamlanır" onClick={() => onAnswer('group', { key: q.key, value: true })}>
             Evet, birleştir
           </button>
-          <button className="ghost" data-tip="Bu kayıtlar birbirinden ayrılır; her biri ayrı kişi olarak kalır" onClick={() => onAnswer('group', { key: q.key, value: false })}>
-            Hayır, bunlar farklı kişiler
+          <button className="ghost" data-tip="Bu satırlar birbirinden ayrılır; her biri ayrı kayıt olarak kalır" onClick={() => onAnswer('group', { key: q.key, value: false })}>
+            Hayır, bunlar farklı kayıtlar
           </button>
           <button className="link" data-tip="Kalan tüm otomatik eşleşmeleri kabul eder, bir daha bunları sormam" onClick={() => onAnswer('review', 'all')}>
             Kalanların hepsini onayla
@@ -76,14 +76,14 @@ function Question({ q, result, sheet, onAnswer }) {
   if (q.kind === 'name') {
     return (
       <div className="ask">
-        <p><b>“{q.name}”</b> isminde <b>{q.people.length} farklı kişi</b> buldum:</p>
+        <p><b>“{q.name}”</b> adında <b>{q.people.length} farklı kayıt</b> buldum:</p>
         <ul className="people">
-          {q.people.map((p, i) => <li key={i}><span className="tag">{i + 1}. kişi</span> {p.summary}</li>)}
+          {q.people.map((p, i) => <li key={i}><span className="tag">{i + 1}. kayıt</span> {p.summary}</li>)}
         </ul>
-        <p>Bunlar aynı kişi mi? Birleştireyim mi?</p>
+        <p>Bunlar aynı kayıt mı? Birleştireyim mi?</p>
         <div className="buttons">
-          <button data-tip="Bu kişiler tek kişi sayılır; farklı olan bilgiler için 'hangisi doğru?' diye sorarım" onClick={() => onAnswer('name', { key: q.key, value: true })}>Evet, aynı kişi — birleştir</button>
-          <button className="ghost" data-tip="Aynı isimli ama farklı kişiler olarak ayrı kalırlar" onClick={() => onAnswer('name', { key: q.key, value: false })}>Hayır, farklı kişiler</button>
+          <button data-tip="Bu kayıtlar tek kayıt sayılır; farklı olan bilgiler kendiliğinden ya da size sorularak birleştirilir" onClick={() => onAnswer('name', { key: q.key, value: true })}>Evet, aynı kayıt — birleştir</button>
+          <button className="ghost" data-tip="Aynı adlı ama farklı kayıtlar olarak ayrı kalırlar" onClick={() => onAnswer('name', { key: q.key, value: false })}>Hayır, farklı kayıtlar</button>
         </div>
       </div>
     );
@@ -92,11 +92,11 @@ function Question({ q, result, sheet, onAnswer }) {
   if (q.kind === 'pair') {
     return (
       <div className="ask">
-        <p>Bu iki kayıt <b>aynı kişiye</b> ait olabilir <span className="muted">(benzerlik %{q.score}: {q.reasons.join(', ')})</span>:</p>
+        <p>Bu iki satır <b>aynı kayda</b> ait olabilir <span className="muted">(benzerlik %{q.score}: {q.reasons.join(', ')})</span>:</p>
         <RawRows rows={[q.a, q.b]} result={result} sheet={sheet} />
         <div className="buttons">
-          <button data-tip="İki kayıt tek kişi sayılır, bilgileri birbirinden tamamlanır" onClick={() => onAnswer('pair', { key: q.key, value: true })}>Evet, aynı kişi</button>
-          <button className="ghost" data-tip="Kayıtlar ayrı kalır, bu iki kayıt için bir daha sormam" onClick={() => onAnswer('pair', { key: q.key, value: false })}>Hayır, farklı kişiler</button>
+          <button data-tip="İki satır tek kayıt sayılır, bilgileri birbirinden tamamlanır" onClick={() => onAnswer('pair', { key: q.key, value: true })}>Evet, aynı kayıt</button>
+          <button className="ghost" data-tip="Kayıtlar ayrı kalır, bu iki kayıt için bir daha sormam" onClick={() => onAnswer('pair', { key: q.key, value: false })}>Hayır, farklı kayıtlar</button>
         </div>
       </div>
     );
@@ -106,12 +106,12 @@ function Question({ q, result, sheet, onAnswer }) {
     return (
       <div className="ask">
         <p>
-          <b>{q.name || (nameCol >= 0 ? result.cells[q.rows[0]][nameCol].value : 'Bu kişi')}</b> için kayıtlarda farklı
+          <b>{q.name || (nameCol >= 0 ? result.cells[q.rows[0]][nameCol].value : 'Bu kayıt')}</b> için satırlarda farklı
           <b> {header(q.col)}</b> bilgileri var. Hangisi doğru?
         </p>
         <div className="buttons vertical">
           {q.options.map((o) => (
-            <button key={o.value} data-tip="Bu kişinin tüm kayıtlarına bu değer yazılır" onClick={() => onAnswer('choice', { id: q.id, value: o.value })}>
+            <button key={o.value} data-tip="Bu kaydın tüm satırlarına bu değer yazılır" onClick={() => onAnswer('choice', { id: q.id, value: o.value })}>
               {o.value} <small>({o.count} kayıtta)</small>
             </button>
           ))}
@@ -143,11 +143,11 @@ function DedupeQuestion({ stats, onAnswer }) {
   return (
     <div className="ask">
       <p>
-        Sorular bitti. Dosyada <b>{stats.people}</b> kişi var ama <b>{stats.duplicates}</b> kayıt aynı kişinin tekrarı.
-        İndireceğin dosyada her kişi <b>tek satır</b> olsun mu?
+        Sorular bitti. Dosyada <b>{stats.people}</b> benzersiz kayıt var; <b>{stats.duplicates}</b> satır bunların tekrarı.
+        İndireceğin dosyada her kayıt <b>tek satır</b> olsun mu?
       </p>
       <div className="buttons">
-        <button data-tip="Aynı kişinin tekrar eden kayıtları indirilen dosyada tek satıra iner" onClick={() => onAnswer('dedupe', true)}>Evet, her kişi tek satır ({stats.people} satır)</button>
+        <button data-tip="Tekrar eden kayıtlar indirilen dosyada tek satıra iner" onClick={() => onAnswer('dedupe', true)}>Evet, her kayıt tek satır ({stats.people} satır)</button>
         <button className="ghost" data-tip="Satır sayısı değişmez, sadece yazımlar düzeltilir" onClick={() => onAnswer('dedupe', false)}>Hayır, tüm satırlar kalsın ({stats.rows} satır)</button>
       </div>
     </div>

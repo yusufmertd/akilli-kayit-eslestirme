@@ -20,6 +20,11 @@ const dl = async (selector) => { const [d] = await Promise.all([page.waitForEven
 
 await page.goto(ADDRESS);
 check('Giriş sayfası ve 3 adım', await page.locator('.steps li').count() === 3);
+check('Site adı: Tablo Düzeltici', (await page.title()) === 'Tablo Düzeltici' && (await page.locator('h1').innerText()) === 'Tablo Düzeltici');
+check('Açıklama evrensel (üniversiteye özel değil)', !/üniversite/i.test(await page.locator('.header p').innerText()));
+await page.click('.topnav >> text=Nasıl çalışır?');
+check('Nasıl çalışır: Ahmet/Dılmaz örneği yok', !/ahmet|dılmaz/i.test(await page.locator('.help').innerText()));
+await page.click('.topnav >> text=Uygulama');
 check('Üst menü (Uygulama/Ayarlar/Nasıl çalışır)', (await page.locator('.topnav button').allInnerTexts()).join('|') === 'Uygulama|Ayarlar|Nasıl çalışır?');
 
 // Nasıl çalışır + Ayarlar sekmeleri
@@ -46,7 +51,7 @@ await page.locator('.setting:has-text("Değişiklikler") input').check();
 await page.click('.topnav >> text=Uygulama');
 
 // Örnek dosya
-await page.click('text=Ham_Veri.xlsx');
+await page.click('.samples >> text=Örnek tablo');
 await page.waitForSelector('.result');
 check('Örnek dosya yüklendi', (await page.locator('.result tbody tr').count()) === 96);
 const emailTexts = await page.locator('.result tbody tr td:nth-child(6)').allInnerTexts();
@@ -78,21 +83,21 @@ await page.screenshot({ path: `${S}/f-tablo.png` });
 await page.click('.modes >> text=1. Otomatik');
 check('Otomatik mod: soru yok', (await bubble()).includes('Hazır!'));
 await page.click('.modes >> text=3. Manuel');
-check('Manuel mod: grup soruları', (await bubble()).includes('aynı kişiye ait görünüyor'));
+check('Manuel mod: grup soruları', (await bubble()).includes('aynı kayda ait görünüyor'));
 await page.click('text=Kalanların hepsini onayla');
 await page.click('.modes >> text=2. Ayıklama');
 
 // Soru cevapla, atla, geri al
-await page.click('text=Evet, aynı kişi — birleştir');
+await page.click('text=Evet, aynı kayıt — birleştir');
 check('Birleştirince çelişki sorulmuyor (Ayıklama)', (await bubble()).includes('Can Özdemir'));
 await page.click('text=Son cevabı geri al');
 check('Geri al', (await bubble()).includes('Ahmet Yılmaz'));
 await page.click('text=Şimdilik atla');
 check('Atla', (await bubble()).includes('Can Özdemir'));
-await page.click('text=Hayır, farklı kişiler');
+await page.click('text=Hayır, farklı kayıtlar');
 check('Atlanan soruya dön butonu', (await bubble()).includes('Atladığım 1 soruya dön'));
 await page.click('text=Atladığım 1 soruya dön');
-await page.click('text=Hayır, farklı kişiler');
+await page.click('text=Hayır, farklı kayıtlar');
 check('Tüm sorular bitti', (await bubble()).includes('Hazır!'));
 
 // Hücre balonu ve düzeltme
@@ -114,7 +119,7 @@ await page.locator('label:has-text("Tekrarları tek satıra indir") input').chec
 check('Tekrarlar tek satır: 32 satır', (await page.locator('.result tbody tr').count()) === 32);
 await page.locator('.tabs button').nth(1).click();
 check('Gruplar sekmesi', (await page.locator('.group-card').count()) === 32);
-await page.locator('.group-card').first().locator('text=Ayır, farklı kişiler').click();
+await page.locator('.group-card').first().locator('text=Ayır, farklı kayıtlar').click();
 check('Grubu ayır', (await page.locator('.group-card').count()) === 31);
 await page.click('text=Son cevabı geri al');
 await page.locator('.tabs button').first().click();
