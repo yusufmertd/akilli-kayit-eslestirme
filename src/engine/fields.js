@@ -8,32 +8,50 @@ import {
   squeeze, isEmpty, titleCase, fold, trLower, trUpper, hasTurkishChars, similarity, closestWord, editDistance,
 } from './text.js';
 import {
-  UNIVERSITIES, DEPARTMENTS, CITIES, FIRST_NAMES, SURNAMES, COMMON_WORDS,
-  INSTITUTION_WORDS, DEPARTMENT_WORDS, ADDRESS_WORDS, parseList, words,
+  UNIVERSITIES, DEPARTMENTS, CITIES, FIRST_NAMES, SURNAMES, COMMON_WORDS, TITLES, FACULTIES, DEGREES, GENDERS,
+  EMAIL_DOMAINS, INSTITUTION_WORDS, DEPARTMENT_WORDS, ADDRESS_WORDS, FACULTY_WORDS, parseList, words,
 } from './dictionaries.js';
 
 // ---------- Sütun türü tespiti ----------
 
+// Sıra önemli: ilk eşleşen tür kazanır ("ogrenci_no" önce kimlik/no olarak yakalanır).
 const HEADER_HINTS = [
   ['email', /e_?posta|mail/],
   ['phone', /tel|gsm|cep/],
-  ['id', /(^|_)(id|no|kod)$|sira/],
-  ['name', /ad_?soyad|ad soyad|isim|adi|^ad$|name|ogrenci|katilimci|kisi/],
-  ['institution', /kurum|universite|okul|kurulus|sirket|firma/],
-  ['department', /bolum|departman|program|fakulte|birim/],
+  ['date', /tarih|date|dogum/],
+  ['gender', /cinsiyet|gender|^cins$/],
+  ['title', /unvan|kadro|gorev|title/],
+  ['degree', /ogrenim|derece|seviye|egitim_?durum|program_?tur|kademe/],
+  ['faculty', /fakulte|enstitu|yuksekokul/],
+  ['id', /(^|_)(id|no|kod|numara|numarasi)$|sira|(^|_)tc(_|$)|kimlik|sicil/],
+  ['number', /(^|_)yas(_|$)|(^|_)not(u|_|$)|puan|ortalama|gpa|agno|sinif|kredi|maas|ucret/],
+  ['name', /ad_?soyad|isim|soyad|soyisim|^ad$|^adi$|name|ogrenci|katilimci|kisi|personel|calisan/],
+  ['institution', /kurum|universite|okul|kurulus|sirket|firma|isyeri/],
+  ['department', /bolum|departman|program|birim|anabilim/],
   ['address', /adres/],
-  ['city', /sehir|^il$|il_|city/],
+  ['city', /sehir|^il$|^il_|_il$|city|memleket/],
 ];
+
+const FIRST_NAME_KEYS = new Set(words(FIRST_NAMES).map(fold));
+const CITY_KEYS = new Set(words(CITIES).map(fold));
+const GENDER_KEYS = new Set(['k', 'e', 'kadin', 'erkek', 'kiz', 'bay', 'bayan', 'f', 'm', 'male', 'female']);
 
 export function detectColumnType(header, values) {
   const h = fold(header).replace(/ /g, '_');
   for (const [type, re] of HEADER_HINTS) if (re.test(h)) return type;
 
   // Başlık bir şey söylemiyorsa içeriğe bak
-  const filled = values.filter((v) => !isEmpty(v)).map(String);
-  const ratio = (re) => filled.filter((v) => re.test(v)).length / (filled.length || 1);
-  if (ratio(/@/) > 0.6) return 'email';
-  if (ratio(/^[\d\s()+-]{10,}$/) > 0.6) return 'phone';
+  const filled = values.filter((v) => !isEmpty(v)).map((v) => squeeze(v));
+  if (!filled.length) return 'text';
+  const ratio = (test) => filled.filter(test).length / filled.length;
+  if (ratio((v) => v.includes('@')) > 0.6) return 'email';
+  if (ratio((v) => /^[\d\s()+-]{10,}$/.test(v)) > 0.6) return 'phone';
+  if (ratio((v) => /^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$|^\d{4}-\d{2}-\d{2}/.test(v)) > 0.6) return 'date';
+  if (ratio((v) => /^-?\d+([.,]\d+)?$/.test(v)) > 0.8) return 'number';
+  if (ratio((v) => GENDER_KEYS.has(fold(v))) > 0.8) return 'gender';
+  if (ratio((v) => CITY_KEYS.has(fold(v))) > 0.6) return 'city';
+  if (ratio((v) => /univ|unv|üni/i.test(v)) > 0.5) return 'institution';
+  if (ratio((v) => /^\S+( \S+){1,2}$/.test(v) && FIRST_NAME_KEYS.has(fold(v.split(' ')[0]))) > 0.5) return 'name';
   return 'text';
 }
 
@@ -59,6 +77,7 @@ function buildLookup(list) {
   for (const { name, abbr } of list) {
     names.set(fold(name), name);
     for (const a of abbr) {
+      if (a.length > 5) names.set(fold(a), name); // uzun eş anlamlılar harf hatasıyla da bulunabilsin
       abbrs.set(abbrKey(a), name);
       const k = fold(a).replace(/ /g, '');
       foldedAbbrs.set(k, foldedAbbrs.has(k) && foldedAbbrs.get(k) !== name ? null : name);
@@ -69,6 +88,11 @@ function buildLookup(list) {
 
 const UNI = buildLookup(uniList);
 const DEPT = buildLookup(deptList);
+const TITLE = buildLookup(parseList(TITLES));
+const FACULTY = buildLookup(parseList(FACULTIES));
+const DEGREE = buildLookup(parseList(DEGREES));
+const GENDER = buildLookup(parseList(GENDERS));
+const DOMAINS = words(EMAIL_DOMAINS);
 const CITY = new Map(words(CITIES).map((c) => [fold(c), c]));
 
 // Dosyanın kendisinden öğrenilen sözlükler: Örneğin dosyada bir yerde "Kampüs" yazıyorsa,
@@ -76,7 +100,7 @@ const CITY = new Map(words(CITIES).map((c) => [fold(c), c]));
 export function buildContext(columns) {
   const wordMap = new Map();
   for (const w of words(COMMON_WORDS)) addToMap(wordMap, w);
-  for (const { name } of [...uniList, ...deptList]) words(name).forEach((w) => addToMap(wordMap, w));
+  for (const { name } of [...uniList, ...deptList, ...parseList(FACULTIES), ...parseList(TITLES)]) words(name).forEach((w) => addToMap(wordMap, w));
   for (const w of words(CITIES)) addToMap(wordMap, w);
 
   const nameDict = new Map();
@@ -115,13 +139,17 @@ export function buildContext(columns) {
 const result = (value, sure, known, note = '') => ({ value, sure, known, note });
 
 // Kelimeleri tek tek Türkçe yazımına çevirir: "Arastirma Sokak" -> "Araştırma Sokak"
+// Kısaltmalar (A.Ş., T.C.) ve büyük yazılmış kısa kelimeler (MEF, TED) olduğu gibi korunur.
 function fixWords(text, ctx, expansions = {}) {
+  const allCaps = text === trUpper(text);
   return squeeze(text)
     .split(' ')
     .map((w) => {
       const key = fold(w).replace(/ /g, '');
       if (expansions[key]) return expansions[key];
       if (ctx.wordMap.has(key)) return ctx.wordMap.get(key);
+      if (/\p{L}\.\p{L}/u.test(w) && w.length <= 6) return trUpper(w);
+      if (!allCaps && w.length <= 4 && w === trUpper(w)) return w;
       return titleCase(w);
     })
     .join(' ');
@@ -191,7 +219,7 @@ export function cleanName(raw, ctx) {
         return titleCase(token);
       }
       if (!hit.exact) fuzzy = true;
-      if (ctx.builtinNames.has(fold(hit.value))) knownCount++;
+      if (ctx.builtinNames.has(fold(hit.value))) knownCount += hit.exact ? 1 : 0.5; // tahmini düzeltme yarım puan
       return hit.value;
     })
     .join(' ');
@@ -204,7 +232,26 @@ export function cleanName(raw, ctx) {
 export function cleanInstitution(raw, ctx) {
   const hit = lookup(raw, UNI, INSTITUTION_WORDS, 'universitesi');
   if (hit) return result(hit.value, hit.sure, true, hit.how);
+
+  // Üniversite adı + ek bilgi: "Uludag Univ. Tip Fak." -> "Uludağ Üniversitesi Tıp Fakültesi"
+  const key = expandedKey(raw, INSTITUTION_WORDS);
+  let prefix = '';
+  for (const k of UNI.names.keys()) if (key.startsWith(`${k} `) && k.length > prefix.length) prefix = k;
+  if (prefix) {
+    const restWords = squeeze(raw).split(' ').slice(prefix.split(' ').length);
+    const rest = fixWords(restWords.join(' '), ctx, { ...INSTITUTION_WORDS, ...FACULTY_WORDS });
+    return result(`${UNI.names.get(prefix)} ${rest}`, true, true, 'yazım düzeltildi');
+  }
   return result(fixWords(raw, ctx, INSTITUTION_WORDS), false, false, 'kurum sözlükte yok');
+}
+
+// Sözlüğü olan genel kategori sütunları (unvan, fakülte, öğrenim, cinsiyet) için ortak temizleyici
+function categoryCleaner(table, expansions, label) {
+  return (raw, ctx) => {
+    const hit = lookup(raw, table, expansions);
+    if (hit) return result(hit.value, hit.sure, true, hit.how);
+    return result(fixWords(raw, ctx, expansions), false, false, `${label} sözlükte yok`);
+  };
 }
 
 export function cleanDepartment(raw, ctx) {
@@ -220,16 +267,25 @@ export function cleanCity(raw) {
 }
 
 export function cleanEmail(raw) {
-  const value = trLower(String(raw).replace(/\s+/g, ''))
+  let value = trLower(String(raw).replace(/\s+/g, ''))
     .replace(/[ç]/g, 'c').replace(/[ğ]/g, 'g').replace(/[ı]/g, 'i')
-    .replace(/[ö]/g, 'o').replace(/[ş]/g, 's').replace(/[ü]/g, 'u');
+    .replace(/[ö]/g, 'o').replace(/[ş]/g, 's').replace(/[ü]/g, 'u')
+    .replace(/@+/g, '@').replace(/,/g, '.').replace(/\.+$/, '').replace(/\.con$/, '.com');
+  let note = value !== trLower(squeeze(raw)) ? 'biçim düzeltildi' : '';
+  // Popüler alan adlarındaki harf hatası: "gmial.com" -> "gmail.com"
+  const [local, domain = ''] = value.split('@');
+  if (domain && !DOMAINS.includes(domain)) {
+    const near = DOMAINS.filter((d) => editDistance(domain, d) <= (d.length > 9 ? 2 : 1));
+    if (near.length === 1) { value = `${local}@${near[0]}`; note = 'alan adı düzeltildi'; }
+  }
   const valid = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(value);
-  return result(value, valid, valid, valid ? '' : 'geçersiz e-posta');
+  return result(value, valid, valid, valid ? note : 'geçersiz e-posta');
 }
 
 // Tüm telefonlar tek biçime: 0555 100 00 01
 export function cleanPhone(raw) {
   let d = String(raw).replace(/\D/g, '');
+  if (d.startsWith('0090')) d = d.slice(4);
   if (d.length === 12 && d.startsWith('90')) d = d.slice(2);
   if (d.length === 10) d = `0${d}`;
   if (d.length !== 11 || !d.startsWith('0')) return result(squeeze(raw), false, false, 'telefon biçimi tanınmadı');
@@ -248,8 +304,38 @@ export function cleanAddress(raw, ctx) {
   return result(squeeze(value), true, false);
 }
 
-export function cleanText(raw) {
-  return result(squeeze(raw), true, false);
+// Tarihler tek biçime: 01.02.2024 (gün.ay.yıl). Excel'in sayı olarak sakladığı tarihler de çevrilir.
+export function cleanDate(raw) {
+  const pad = (n) => String(n).padStart(2, '0');
+  if (typeof raw === 'number' && raw > 20000 && raw < 80000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + raw * 86400000);
+    return result(`${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`, true, true);
+  }
+  const s = squeeze(raw);
+  let m = s.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if (m) return result(`${pad(m[3])}.${pad(m[2])}.${m[1]}`, true, true);
+  m = s.match(/^(\d{1,2})[-./](\d{1,2})[-./](\d{2,4})$/);
+  if (m && Number(m[1]) <= 31 && Number(m[2]) <= 12) {
+    const year = m[3].length === 2 ? (Number(m[3]) > 30 ? `19${m[3]}` : `20${m[3]}`) : m[3];
+    return result(`${pad(m[1])}.${pad(m[2])}.${year}`, true, true);
+  }
+  return result(s, false, false, 'tarih biçimi tanınmadı');
+}
+
+// Sayılar (yaş, not, puan) ve kimlik numaraları değiştirilmez
+export const keepAsIs = (raw) => result(String(raw), true, true);
+
+export function cleanText(raw, ctx) {
+  // Türkçe karakteri dosyanın başka bir yerinde doğru yazılmış kelimeler düzeltilir (Muhendis -> Mühendis)
+  const text = squeeze(raw);
+  const fixed = text.split(' ').map((w) => {
+    const hit = !hasTurkishChars(w) && /^\p{L}+$/u.test(w) && ctx.wordMap.get(fold(w));
+    if (!hit) return w;
+    if (w === trUpper(w)) return trUpper(hit);
+    if (w === trLower(w)) return trLower(hit);
+    return hit;
+  }).join(' ');
+  return result(fixed, true, false, fixed !== text ? 'Türkçe karakter düzeltildi' : '');
 }
 
 export const CLEANERS = {
@@ -260,5 +346,12 @@ export const CLEANERS = {
   email: cleanEmail,
   phone: cleanPhone,
   address: cleanAddress,
+  title: categoryCleaner(TITLE, {}, 'unvan'),
+  faculty: categoryCleaner(FACULTY, FACULTY_WORDS, 'fakülte'),
+  degree: categoryCleaner(DEGREE, {}, 'öğrenim düzeyi'),
+  gender: categoryCleaner(GENDER, {}, 'cinsiyet'),
+  date: cleanDate,
+  number: keepAsIs,
+  id: keepAsIs,
   text: cleanText,
 };

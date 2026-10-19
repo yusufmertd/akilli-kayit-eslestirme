@@ -1,26 +1,36 @@
 // Ana akış:
-// 1) Sütun türlerini bul   2) Her hücreyi temizle   3) Sütundaki benzer değerleri birleştir
-// 4) Aynı kişiye ait kayıtları grupla   5) Grup içinde en doğru yazımı seç, boşlukları doldur
-// 6) Emin olunamayan durumları kullanıcıya soru olarak çıkar
+// 1) Sütun türlerini bul   2) Her hücreyi temizle   3) Sütundaki aynı/benzer değerleri tek yazıma indir
+// 4) Aynı kişiye ait kayıtları grupla (aynı isimli farklı kişiler için kullanıcıya sor)
+// 5) Grup içinde en doğru yazımı seç, boşlukları doldur; çelişen değerlerde kullanıcıya "hangisi doğru?" diye sor
+// 6) Emin olunamayan tüm durumları soru listesi olarak çıkar
 //
-// decisions: kullanıcının cevapları
-//   pairs: { "3-17": true | false }        -> şüpheli çift aynı kişi mi?
-//   rules: { [sütun]: { [katlanmış değer]: "doğru yazım" } } -> kullanıcının yazdığı düzeltmeler
-//   cells: { "satır-sütun": "değer" }      -> boş bir hücreye kullanıcının yazdığı değer
-//   types: { [sütun]: "name" | "email" ... } -> kullanıcının seçtiği sütun türü
+// decisions: kullanıcının cevapları (her cevaptan sonra her şey yeniden hesaplanır)
+//   pairs:   { "3-17": true | false }              -> şüpheli iki kayıt aynı kişi mi?
+//   names:   { "ahmet yilmaz": true | false }       -> aynı isimli kişiler birleştirilsin mi?
+//   choices: { "satır|sütun": "değer" | KEEP_OWN }  -> birleşen grupta çelişen alan için doğru değer
+//   rules:   { [sütun]: { [katlanmış değer]: "doğru yazım" } } -> kullanıcının yazdığı düzeltmeler
+//   cells:   { "satır-sütun": "değer" }             -> tek bir hücreye kullanıcının yazdığı değer
+//   types:   { [sütun]: "name" | "email" ... }      -> kullanıcının seçtiği sütun türü
 
-import { fold, isEmpty, similarity, hasTurkishChars } from './text.js';
+import { fold, isEmpty, similarity, hasTurkishChars, titleCase, trUpper, trLower } from './text.js';
 import { detectColumnType, buildContext, CLEANERS } from './fields.js';
 import { findPairs, buildGroups } from './matcher.js';
 
-const GROUPED_TYPES = ['name', 'institution', 'department', 'city', 'address', 'email', 'phone'];
-const CATEGORY_TYPES = ['institution', 'department', 'city', 'text'];
+export const KEEP_OWN = '__her_satir_kendi__';
+
+// Grup içinde birleştirilen sütunlar (kişiye ait bilgiler). İsim önce gelir; e-posta seçiminde isim kullanılır.
+const PERSON_TYPES = ['name', 'institution', 'faculty', 'department', 'title', 'degree', 'gender', 'city', 'address', 'date', 'email', 'phone'];
+const CATEGORY_TYPES = ['institution', 'faculty', 'department', 'title', 'degree', 'gender', 'city', 'text'];
+// Grup özetinde (kartlarda, sorularda) kişiyi tanıtmak için kullanılan alanlar
+const SUMMARY_TYPES = ['institution', 'department', 'city', 'phone', 'email'];
 
 export const pairKey = (a, b) => `${Math.min(a, b)}-${Math.max(a, b)}`;
 
 export function processTable(headers, rows, decisions = {}) {
   const types = headers.map((h, c) => decisions.types?.[c] || detectColumnType(h, rows.map((r) => r[c])));
   const ctx = buildContext(types.map((type, c) => ({ type, values: rows.map((r) => r[c]) })));
+  const colsOf = (type) => types.flatMap((t, c) => (t === type ? [c] : []));
+  const nameCols = colsOf('name'); // "Ad" ve "Soyad" ayrı sütun olabilir
 
   // 2) Hücre temizliği
   const cleaned = rows.map((row) =>
@@ -29,67 +39,110 @@ export function processTable(headers, rows, decisions = {}) {
       if (isEmpty(raw)) return null;
       const userValue = decisions.rules?.[c]?.[fold(raw)];
       if (userValue !== undefined) return { value: userValue, sure: true, known: true, user: true, note: 'kullanıcı düzeltmesi' };
-      if (types[c] === 'id') return { value: String(raw), sure: true, known: true, note: '' };
       return CLEANERS[types[c]](raw, ctx);
     }),
   );
 
-  // 3) Sütun içi birleştirme: sözlükte olmayan bir değer, sütundaki çok benzer bir değere çekilir
+  // 3) Sütun içi tek yazım
   types.forEach((type, c) => {
-    if (CATEGORY_TYPES.includes(type)) harmonizeColumn(cleaned.map((r) => r[c]));
+    if (CATEGORY_TYPES.includes(type)) harmonizeColumn(cleaned.map((r) => r[c]), type);
   });
 
   // 4) Kayıt eşleştirme
-  const roleIndex = {};
-  types.forEach((t, c) => { if (!(t in roleIndex)) roleIndex[t] = c; });
+  const fullName = (cellsOfRow) => nameCols.map((c) => cellsOfRow[c]?.value).filter(Boolean).join(' ');
   const records = cleaned.map((r) => {
-    const rec = {};
-    for (const [role, c] of Object.entries(roleIndex)) rec[role] = r[c]?.value ?? '';
+    const rec = { name: fullName(r) };
+    for (const type of ['email', 'phone', 'institution', 'department', 'address', 'city']) {
+      const c = colsOf(type)[0];
+      rec[type] = c === undefined ? '' : r[c]?.value ?? '';
+    }
     return rec;
   });
 
   const pairs = findPairs(records);
-  const links = pairs
-    .filter((p) => {
-      const answer = decisions.pairs?.[pairKey(p.a, p.b)];
-      return answer === true || (p.status === 'sure' && answer !== false);
-    })
-    .map((p) => [p.a, p.b]);
+  const answerOf = (p) => decisions.pairs?.[pairKey(p.a, p.b)];
+  const links = pairs.filter((p) => answerOf(p) === true || (p.status === 'sure' && answerOf(p) !== false)).map((p) => [p.a, p.b]);
+
+  // Aynı isimde birden fazla kişi (grup) varsa: kullanıcı "birleştir" dediyse birleştir, cevap yoksa sor
+  const byName = new Map();
+  for (const g of buildGroups(rows.length, links)) {
+    const key = fold(mostCommon(g.map((r) => records[r].name).filter(Boolean)));
+    if (!key) continue;
+    if (!byName.has(key)) byName.set(key, []);
+    byName.get(key).push(g);
+  }
+  const nameQuestions = [];
+  for (const [key, sameName] of byName) {
+    if (sameName.length < 2) continue;
+    const answer = decisions.names?.[key];
+    if (answer === true) for (let i = 1; i < sameName.length; i++) links.push([sameName[0][0], sameName[i][0]]);
+    if (answer !== undefined) continue;
+    nameQuestions.push({
+      kind: 'name',
+      id: `name|${key}`,
+      key,
+      name: mostCommon(sameName.flat().map((r) => records[r].name)),
+      people: sameName.map((g) => ({ rows: g, summary: summarize(g, cleaned, types) })),
+    });
+  }
+
   const groups = buildGroups(rows.length, links);
   const groupOf = new Array(rows.length);
   groups.forEach((g, gi) => g.forEach((r) => { groupOf[r] = gi; }));
 
-  // 5) Grup içinde en iyi yazımı seç
+  // 5) Grup içinde en iyi yazımı seç; çelişki varsa kullanıcının seçimini uygula ya da sor
   const final = cleaned.map((r) => r.map((cell) => (cell ? { ...cell } : null)));
+  const conflictQuestions = [];
   for (const group of groups) {
     if (group.length < 2) continue;
-    let chosenName = ''; // isim önce seçilir; e-posta seçiminde isim kullanılır
-    for (const type of GROUPED_TYPES) {
-      types.forEach((t, col) => {
-        if (t !== type) return;
-        const best = pickBest(group.map((r) => cleaned[r][col]).filter(Boolean), type, chosenName);
-        if (!best) return;
-        if (type === 'name' && col === roleIndex.name) chosenName = best.value;
+    const anchor = group[0];
+    let chosenName = '';
+    for (const type of PERSON_TYPES) {
+      for (const col of colsOf(type)) {
+        const cands = group.map((r) => cleaned[r][col]).filter(Boolean);
+        if (!cands.length) continue;
+        const clusters = clusterVariants(cands, type);
+        const choiceId = `${anchor}|${col}`;
+        const choice = decisions.choices?.[choiceId];
+
+        if (clusters.length > 1 && choice === undefined) {
+          // Çelişki: her satır kendi değerinin en iyi yazımını korur, kullanıcıya sorulur
+          for (const r of group) {
+            const own = cleaned[r][col];
+            if (!own) continue;
+            const best = pickBest(clusters.find((cl) => cl.includes(own)), type, chosenName);
+            final[r][col] = { ...best, sure: false, note: 'aynı kişide farklı değerler var, size soruldu' };
+          }
+          conflictQuestions.push({
+            kind: 'conflict',
+            id: choiceId,
+            col,
+            rows: group,
+            name: fullName(cleaned[anchor]),
+            options: clusters.map((cl) => ({ value: pickBest(cl, type, chosenName).value, count: cl.length })),
+          });
+          continue;
+        }
+
+        if (choice === KEEP_OWN) continue; // kullanıcı "her satır kendi değerini korusun" dedi
+        const best = choice !== undefined
+          ? { value: choice, sure: true, known: true, user: true, note: 'kullanıcı seçimi' }
+          : pickBest(cands, type, chosenName);
         for (const r of group) {
           const own = cleaned[r][col];
-          // E-posta ve telefon: kişiye ait farklı bir değer varsa ezilmez; sadece yazım hataları ve boşluklar düzeltilir
-          if (own && type === 'phone' && own.value !== best.value) continue;
-          if (own && type === 'email' && !sameEmail(own.value, best.value)) continue;
           final[r][col] = { ...best, note: own ? best.note || 'grup içi oylama' : 'aynı kişinin diğer kaydından dolduruldu' };
         }
-      });
+      }
+      if (type === 'name') chosenName = fullName(final[anchor]);
     }
   }
 
   // E-postada kaymış nokta onarımı: isim "Can Özdemir" ise "cano.zdemir.ege" -> "can.ozdemir.ege"
-  if (roleIndex.name !== undefined) {
-    types.forEach((t, col) => {
-      if (t !== 'email') return;
-      final.forEach((row) => {
-        const cell = row[col];
-        const fixed = cell && repairEmailDots(cell.value, row[roleIndex.name]?.value);
-        if (fixed && fixed !== cell.value) row[col] = { ...cell, value: fixed, note: 'e-postadaki nokta düzeltildi' };
-      });
+  for (const col of colsOf('email')) {
+    final.forEach((row) => {
+      const cell = row[col];
+      const fixed = cell && repairEmailDots(cell.value, fullName(row));
+      if (fixed && fixed !== cell.value) row[col] = { ...cell, value: fixed, note: 'e-postadaki nokta düzeltildi' };
     });
   }
 
@@ -108,44 +161,106 @@ export function processTable(headers, rows, decisions = {}) {
   );
 
   // 6) Sorular
-  // Aynı iki grup arasında tek soru sorulur; kullanıcı "farklı" dediyse o iki grup için bir daha sorulmaz.
+  // Şüpheli çiftler: aynı iki grup için tek soru; "farklı" denen gruplar ve aynı isim sorusunun kapsadıkları tekrar sorulmaz
+  const askedNames = new Set(nameQuestions.map((q) => q.key));
   const groupPair = (p) => pairKey(groupOf[p.a], groupOf[p.b]);
-  const rejected = new Set(pairs.filter((p) => decisions.pairs?.[pairKey(p.a, p.b)] === false).map(groupPair));
+  const rejected = new Set(pairs.filter((p) => answerOf(p) === false).map(groupPair));
   const asked = new Map();
   for (const p of pairs) {
     if (p.status !== 'unsure' || groupOf[p.a] === groupOf[p.b] || rejected.has(groupPair(p))) continue;
+    const nameA = fold(records[p.a].name);
+    if (nameA === fold(records[p.b].name) && (askedNames.has(nameA) || decisions.names?.[nameA] !== undefined)) continue;
     const prev = asked.get(groupPair(p));
-    if (!prev || p.score > prev.score) asked.set(groupPair(p), { ...p, key: pairKey(p.a, p.b) });
+    if (!prev || p.score > prev.score) asked.set(groupPair(p), { kind: 'pair', id: `pair|${pairKey(p.a, p.b)}`, ...p, key: pairKey(p.a, p.b) });
   }
-  const pairQuestions = [...asked.values()];
 
   const cellQuestions = [];
   const seen = new Set();
   cells.forEach((row, r) => row.forEach((cell, c) => {
-    if (!cell.unsure || !cell.original) return;
-    const id = `${c}|${fold(cell.original)}`;
+    if (!cell.unsure || !cell.original || cell.note.startsWith('aynı kişide')) return;
+    const id = `cell|${c}|${fold(cell.original)}`;
     if (seen.has(id)) return;
     seen.add(id);
-    cellQuestions.push({ col: c, row: r, original: cell.original, suggestion: cell.value, note: cell.note });
+    cellQuestions.push({ kind: 'cell', id, col: c, row: r, original: cell.original, suggestion: cell.value, note: cell.note });
   }));
 
   const flat = cells.flat();
+  const multi = groups.filter((g) => g.length > 1);
   return {
     headers,
     types,
     cells,
-    groups: groups.filter((g) => g.length > 1),
+    groups: multi,
     groupOf,
     pairs,
-    questions: { pairs: pairQuestions, cells: cellQuestions },
+    summaries: multi.map((g) => summarize(g, final, types)),
+    // Çelişki soruları önce: kullanıcı "birleştir" deyince hemen ardından "hangisi doğru?" sorulur
+    questions: [...conflictQuestions, ...nameQuestions, ...asked.values(), ...cellQuestions],
     stats: {
       rows: rows.length,
+      people: groups.length,
       fixed: flat.filter((x) => x.status === 'fixed').length,
       filled: flat.filter((x) => x.status === 'filled').length,
       unsure: flat.filter((x) => x.unsure).length,
-      groups: groups.filter((g) => g.length > 1).length,
+      groups: multi.length,
+      duplicates: rows.length - groups.length,
     },
   };
+}
+
+// Tekrarları tek satıra indirilmiş tablo: her kişi için bir satır (grubun ilk satırı kalır).
+// Kimlik, sayı ve serbest metin sütunlarında gruptaki farklı değerler virgülle birleştirilir (R001, R012, R059).
+export function collapseRows(result, rawRows) {
+  const ownValue = (r, c) => (result.cells[r][c].status === 'same' ? rawRows[r][c] : result.cells[r][c].value);
+  const groupOfAnchor = new Map(result.groups.map((g) => [g[0], g]));
+  const hidden = new Set(result.groups.flatMap((g) => g.slice(1)));
+  return result.cells.flatMap((_, r) => {
+    if (hidden.has(r)) return [];
+    const group = groupOfAnchor.get(r) || [r];
+    const values = result.headers.map((__, c) => {
+      if (group.length === 1 || !['id', 'text', 'number'].includes(result.types[c])) return ownValue(r, c);
+      const distinct = [...new Set(group.map((x) => String(ownValue(x, c) ?? '')).filter(Boolean))];
+      return distinct.length > 1 ? distinct.join(', ') : ownValue(r, c);
+    });
+    return [{ row: r, values }];
+  });
+}
+
+// ---------- Yardımcılar ----------
+
+function mostCommon(values) {
+  const counts = new Map();
+  for (const v of values) counts.set(v, (counts.get(v) || 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+}
+
+// Bir grubu kullanıcıya tanıtan kısa özet: "Uludağ Üniversitesi · Bilgisayar Mühendisliği · 3 kayıt"
+function summarize(group, cellsByRow, types) {
+  const parts = [];
+  for (const type of SUMMARY_TYPES) {
+    const c = types.indexOf(type);
+    if (c < 0 || parts.length >= 2) continue;
+    const v = mostCommon(group.map((r) => cellsByRow[r][c]?.value).filter(Boolean));
+    if (v) parts.push(v);
+  }
+  return [...parts, `${group.length} kayıt`].join(' · ');
+}
+
+// Aynı değerin yazım çeşitleri bir arada toplanır; farklı değerler ayrı kümelere düşer.
+// ("Ahmet Yılmaz" ~ "Abmet Dılmaz" aynı küme; "Uludağ Üniversitesi" ile "Hacettepe Üniversitesi" ayrı kümeler)
+function clusterVariants(cands, type) {
+  const same = (a, b) => {
+    if (type === 'phone' || type === 'date') return a.value === b.value;
+    if (type === 'email') return sameEmail(a.value, b.value);
+    return similarity(fold(a.value), fold(b.value)) >= 0.8;
+  };
+  const clusters = [];
+  for (const c of cands) {
+    const home = clusters.find((cl) => cl.some((x) => same(x, c)));
+    if (home) home.push(c);
+    else clusters.push([c]);
+  }
+  return clusters;
 }
 
 // Grup içi en iyi değer. Her aday için puan:
@@ -195,32 +310,63 @@ function repairEmailDots(email, name) {
   return `${parts.join('.')}${rest}@${domain}`;
 }
 
-// Sütundaki sözlük dışı değerleri, çok benzer (yazım hatası) daha güvenilir bir değere eşler.
-function harmonizeColumn(cells) {
-  const forms = new Map(); // katlanmış -> { cell, count }
-  for (const cell of cells) {
-    if (!cell) continue;
+// Bir yazımın "kalitesi": Türkçe karakter içeren, BÜYÜK/küçük karışık (normal) yazım tercih edilir
+const writingQuality = (v) => (hasTurkishChars(v) ? 0.5 : 0) + (v !== trUpper(v) && v !== trLower(v) ? 0.3 : 0);
+
+// Sütun içi tek yazım:
+//  a) Katlanınca aynı olan yazımlar ("COCA COLA", "coca cola", "Coca Cola") en iyi yazıma indirilir
+//  b) Sözlük dışı bir değer, sütundaki çok benzer (%88+) daha güvenilir bir değere çekilir (yazım hatası)
+//  c) Serbest metin sütununda çoğunluk normal yazılmışsa TAMAMI BÜYÜK / tamamı küçük değerler düzeltilir
+function harmonizeColumn(cells, type) {
+  const filled = cells.filter(Boolean);
+  const forms = new Map(); // katlanmış -> hücreler
+  for (const cell of filled) {
     const k = fold(cell.value);
-    const f = forms.get(k);
-    if (f) f.count++;
-    else forms.set(k, { cell, count: 1 });
+    if (!forms.has(k)) forms.set(k, []);
+    forms.get(k).push(cell);
   }
-  for (const cell of cells) {
-    if (!cell || cell.known) continue;
-    const k = fold(cell.value);
-    const own = forms.get(k);
-    let target = null;
-    for (const [k2, f] of forms) {
-      if (k2 === k || similarity(k, k2) < 0.88) continue;
-      const better = f.cell.known || f.count > own.count;
-      if (better && (!target || f.count > target.count)) target = f;
+
+  // a)
+  for (const group of forms.values()) {
+    const score = (c) => group.filter((x) => x.value === c.value).length + writingQuality(c.value) + (c.known ? 1.5 : 0);
+    const best = group.reduce((a, b) => (score(b) > score(a) ? b : a));
+    for (const cell of group) {
+      if (cell.value !== best.value) {
+        Object.assign(cell, { value: best.value, known: best.known, sure: best.sure, note: cell.note || 'sütundaki yazımla eşitlendi' });
+      }
     }
-    if (target) {
-      Object.assign(cell, { value: target.cell.value, known: target.cell.known, sure: target.cell.known, note: 'benzer değerle birleştirildi' });
-    } else if (hasTurkishChars(cell.value) || own.count > 1) {
-      // sözlükte yok ama dosyada tutarlı geçiyor -> muhtemelen doğru
-      cell.sure = cell.sure || own.count > 1;
+  }
+
+  // b) Serbest metin sütunlarında sadece "kategori gibi" (değerleri tekrar eden) sütunlarda yapılır
+  const categorical = type !== 'text' || forms.size <= filled.length * 0.6;
+  if (categorical) {
+    for (const [k, group] of forms) {
+      if (group[0].known) continue;
+      let target = null;
+      for (const [k2, other] of forms) {
+        if (k2 === k || similarity(k, k2) < 0.88) continue;
+        if ((other[0].known || other.length > group.length) && (!target || other.length > target.length)) target = other;
+      }
+      if (target) {
+        const t = target[0];
+        group.forEach((cell) => Object.assign(cell, { value: t.value, known: t.known, sure: t.known || target.length > 1, note: 'benzer değerle birleştirildi' }));
+      } else if (group.length > 1 || hasTurkishChars(group[0].value)) {
+        // sözlükte yok ama dosyada tutarlı geçiyor -> muhtemelen doğru
+        group.forEach((cell) => { cell.sure = true; });
+      }
+    }
+  }
+
+  // c)
+  if (type === 'text') {
+    const lettered = filled.filter((c) => /\p{L}{2}/u.test(c.value) && !/[@\d]/.test(c.value));
+    const normal = lettered.filter((c) => c.value !== trUpper(c.value) && c.value !== trLower(c.value));
+    if (lettered.length >= 3 && normal.length / lettered.length >= 0.6) {
+      for (const c of lettered) {
+        if (c.value === trUpper(c.value) || c.value === trLower(c.value)) {
+          Object.assign(c, { value: titleCase(c.value), note: 'büyük/küçük harf düzeltildi' });
+        }
+      }
     }
   }
 }
-

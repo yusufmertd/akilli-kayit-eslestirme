@@ -11,24 +11,34 @@ Abmet Dılmaz │ Uludag Universitesi │ Bilgisayar Muhendisligi │ No.8 - Yen
 Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni Mahallesi, Bilim Caddesi No: 8
 ```
 
-- **Konu:** Türkiye'deki üniversiteler (ad soyad, üniversite, bölüm, e-posta, telefon, adres, şehir)
+- **Konu:** Türkiye'deki üniversiteler: ad soyad (tek veya ayrı sütun), üniversite, fakülte, bölüm, unvan,
+  öğrenim düzeyi, cinsiyet, e-posta, telefon, adres, şehir, tarih. Bilinmeyen sütunlar da genel kurallarla temizlenir.
 - **Teknoloji:** React + Vite, JavaScript, Excel okuma/yazma için SheetJS
 - **Gizlilik:** Dosya tarayıcıdan hiç çıkmaz. Sunucu yok, veritabanı yok, `localStorage` yok.
   Dosya yalnızca sayfanın belleğinde işlenir; sayfa kapanınca hiçbir iz kalmaz.
-- **Kural:** Satırlar silinmez veya birleştirilmez. Satır sayısı aynı kalır, sadece yazımlar düzeltilir
-  ve aynı kişinin diğer kayıtlarından boş alanlar doldurulur.
+- **Kullanıcı merkezli:** Algoritma emin olamadığı her konuyu bir **asistan balonunda tek tek sorar**
+  ("Bunlar aynı kişi mi?", "Hangi üniversite doğru?", "Doğru yazımı bu mu?"). Kararlar kullanıcınındır.
+- **Satırlar:** Varsayılan olarak tüm satırlar korunur, sadece yazımlar düzeltilir. Kullanıcı isterse
+  aynı kişinin tekrar eden kayıtları tek satıra indirilir.
 
 ## Kullanım
 
-1. Excel veya CSV dosyasını sürükleyip bırakın (birden çok sayfalı Excel dosyaları da desteklenir).
-2. Uygulama sütun türlerini başlık ve içerikten tahmin eder (yanlışsa sütun başlığındaki listeden değiştirebilirsiniz).
-3. Sonuç tablosunda **yeşil** = düzeltildi, **mavi** = aynı kişinin diğer kaydından dolduruldu,
-   **sarı** = emin değilim. Hücrenin üzerine gelince eski değer ve gerekçe görünür; tıklayınca düzeltebilirsiniz.
-4. Algoritmanın emin olamadığı durumlar **"Emin olamadığım durumlar"** kutusunda soru olarak çıkar:
-   - "Bu iki kayıt aynı kişiye mi ait?" → Evet / Hayır
-   - "Bu değerin doğru yazımı nedir?" → kullanıcı yazar; düzeltme aynı yazıma sahip **tüm** hücrelere uygulanır
-     ve algoritma bu bilgiyle yeniden çalışır.
-5. **Excel indir** veya **CSV indir**. İsterseniz "Grup numarası sütunu ekle" ile eşleşen kayıtları işaretleyebilirsiniz.
+1. Excel veya CSV dosyasını sürükleyip bırakın ya da **örnek dosyayla deneyin**. Çok sayfalı Excel, üstünde
+   başlık/açıklama satırı olan tablolar ve Türkçe Windows kodlamalı, `;` ayraçlı CSV'ler de okunur.
+2. Sütun türleri başlıktan, başlık tanıdık değilse **içerikten** tahmin edilir (yanlışsa başlıktaki listeden değiştirilebilir).
+3. **Asistan balonu** özet verir ve emin olamadığı konuları sırayla sorar. Her cevaptan sonra her şey yeniden hesaplanır:
+   - **Aynı isimde birden fazla kişi:** *"“Ahmet Yılmaz” isminde 2 farklı kişi buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
+   - **Birleştirince çelişen bilgiler:** *"Ahmet Yılmaz için farklı Kurum bilgileri var. Hangisi doğru?"*
+     → seçenekler, "her kayıt kendi değerini korusun" veya serbest yazım.
+   - **Şüpheli iki kayıt:** *"Bu iki kayıt aynı kişiye ait olabilir (benzerlik %80: isim aynı, kurum aynı). Aynı kişi mi?"*
+   - **Emin olunamayan yazım:** *"Ad_Soyad sütununda “eymn blgin” yazıyor. Doğru yazımı “Eymen Bilgin” olabilir mi?"*
+     Cevap aynı yazıma sahip **tüm** hücrelere uygulanır.
+   - **Son soru:** *"Her kişi tek satır olsun mu?"*
+   - "Şimdilik atla" ve "Son cevabı geri al" her zaman kullanılabilir.
+4. Tabloda **yeşil** = düzeltildi, **mavi** = aynı kişinin diğer kaydından dolduruldu, **sarı** = emin değilim.
+   Bir hücreye tıklayınca **hücre balonu** açılır: dosyadaki eski hâli, değişiklik gerekçesi, "doğru mu?" onayı ve düzeltme kutusu.
+5. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
+   şeklinde birleşir), grup numarası sütunu ekle.
 
 ## Eşleştirme sistemi nasıl çalışır?
 
@@ -37,8 +47,9 @@ Kod `src/engine/` klasöründedir ve arayüzden bağımsızdır (Node.js'te de t
 | Dosya | Görevi |
 |---|---|
 | `text.js` | Türkçe büyük/küçük harf, karşılaştırma anahtarı, Damerau-Levenshtein mesafesi |
-| `dictionaries.js` | 196 üniversite + kısaltmaları, 119 bölüm, 81 il, ~430 Türkçe ad/soyad, adres kısaltmaları |
-| `fields.js` | Sütun türü tespiti ve her tür için temizleyici |
+| `dictionaries.js` | 196 üniversite + kısaltmaları, 119 bölüm, 36 fakülte/enstitü, akademik unvanlar, öğrenim düzeyleri, 81 il, ~430 Türkçe ad/soyad, e-posta alan adları |
+| `fields.js` | Sütun türü tespiti (başlık + içerik) ve her tür için temizleyici |
+| `table.js` | Başlık satırını bulma (üstte açıklama satırları olan dosyalar için) |
 | `matcher.js` | İki kaydın aynı kişi olup olmadığına karar verme, gruplama |
 | `pipeline.js` | Tüm adımları sırayla çalıştıran ana akış |
 
@@ -61,9 +72,17 @@ karşılaştırmayı bozmaz. (Türkçe'ye özgü `I/ı`, `İ/i` dönüşümleri 
   1 harf uzaklıkta olanlar (tekrar eden yazım hatası: `Neihr` ~ `Nehir`) öğrenilmez.
 - **E-posta:** boşluklar silinir, küçük harfe çevrilir. İsimle karşılaştırılarak kaymış nokta onarılır
   (`cano.zdemir.ege@` → `can.ozdemir.ege@`).
+  Popüler alan adlarındaki hatalar düzeltilir (`gmial.com` → `gmail.com`, `outlok.com`, `.con`).
 - **Telefon:** tek biçime: `0555 100 00 01`. **Adres:** `Mah./Cad./Sk./Blv.` açılır, tek biçime getirilir:
-  `Yeni Mahallesi, Bilim Caddesi No: 8`. **Şehir:** 81 il listesiyle düzeltilir.
-- Sözlükte olmayan kategorik değerler, aynı sütundaki çok benzer (%88+) daha güvenilir bir değere çekilir.
+  `Yeni Mahallesi, Bilim Caddesi No: 8`. **Şehir:** 81 il listesiyle düzeltilir. **Tarih:** `5.3.1998`, `1998-03-05`,
+  Excel tarih sayısı → `05.03.1998`.
+- **Unvan / Fakülte / Öğrenim / Cinsiyet:** sözlük + eş anlamlılar (`Araştırma Görevlisi`, `Ars. Gor.` → `Arş. Gör.`;
+  `Yrd. Doç. Dr.` → `Dr. Öğr. Üyesi`; `K`, `Bayan` → `Kadın`). Kurum + fakülte birlikte yazılmışsa ikisi de düzeltilir
+  (`Uludağ Üniversitesi Tıp Fak.` → `Uludağ Üniversitesi Tıp Fakültesi`).
+- **Bilinmeyen sütunlar (genel kurallar):** Katlanınca aynı olan yazımlar (`COCA COLA`, `coca cola`) sütundaki en iyi
+  yazıma indirilir; sözlükte olmayan değerler sütundaki çok benzer (%88+) daha sık bir değere çekilir; dosyanın başka
+  yerinde Türkçe karakterle yazılmış kelimeler düzeltilir; çoğunluk normal yazılmışsa TAMAMI BÜYÜK değerler düzeltilir.
+  Kimlik, sayı (yaş, not, puan) sütunlarına dokunulmaz.
 
 ### Adım 3 — Aynı kişiye ait kayıtları bulma
 Benzer isim **tek başına yeterli değildir** (veride "Ahmet Yılmaz – Uludağ" ve "Ahmet Yılmaz – Hacettepe" iki farklı kişidir).
@@ -81,14 +100,21 @@ Karar kuralları:
 E-postada sayılar farklıysa (`ali.can.1@` / `ali.can.2@`) farklı kişi kabul edilir. Kesin çiftler birleşim-bul
 (union-find) ile gruplara dönüştürülür.
 
+**Aynı isim, farklı kişi:** Gruplamadan sonra aynı isme sahip birden fazla grup kalırsa (ör. Uludağ'daki ve
+Hacettepe'deki Ahmet Yılmaz) karar kullanıcıya bırakılır: *"Birleştireyim mi?"*
+
 ### Adım 4 — Grup içinde en doğru yazımı seçme
-Her alan için gruptaki adaylar puanlanır: **diğer adaylara benzerlik toplamı** (çoğunluk oyu + "merkez" yazım)
-+ sözlükte bulunma + Türkçe karakter içerme + kullanıcı onayı. Kazanan değer gruptaki tüm satırlara yazılır,
-boş hücreler doldurulur. Kişiye ait farklı e-posta / telefon varsa ezilmez.
+Her alanın değerleri önce **yazım çeşitleri** kümelerine ayrılır (`Ahmet Yılmaz` ~ `Abmet Dılmaz` aynı küme,
+`Uludağ Ün.` ile `Hacettepe Ün.` ayrı kümeler).
+- **Tek küme (sadece yazım farkı):** adaylar puanlanır: diğer adaylara benzerlik toplamı (çoğunluk + "merkez" yazım)
+  + sözlükte bulunma + Türkçe karakter + kullanıcı onayı. Kazanan gruptaki tüm satırlara yazılır, boşluklar doldurulur.
+- **Birden çok küme (gerçek çelişki):** algoritma tahmin etmez, **"Hangisi doğru?"** diye sorar. Cevap gelene kadar
+  her satır kendi değerini (düzeltilmiş hâliyle) korur.
 
 ### Adım 5 — Emin olunamayan durumlar
-Şüpheli çiftler ve doğrulanamayan değerler soru olarak çıkar. Cevaplar algoritmaya geri beslenir ve
-her şey yeniden hesaplanır (aynı iki grup için ikinci kez sorulmaz).
+Şüpheli çiftler, aynı isimli kişiler, çelişen alanlar ve doğrulanamayan yazımlar soru kuyruğuna girer.
+Cevaplar algoritmaya geri beslenir, her şey yeniden hesaplanır. Aynı iki grup için ikinci kez sorulmaz;
+"birleştir" cevabının hemen ardından o kişinin çelişen alanları sorulur.
 
 ## Test sonuçları
 
@@ -101,21 +127,33 @@ referanslarına bakılarak elle doğrulandı (`tests/data/Ham_Veri_dogru_gruplar
 **2. Sentetik veriler (`tests/generate.js`):** Algoritmanın yalnızca örnek dosyaya göre ayarlanmadığını görmek için
 doğru cevabı bilinen veriler üretildi: rastgele kişiler oluşturulup her birinin 1–3 kopyası bozuldu
 (Türkçe karakter kaybı, BÜYÜK/küçük harf, harf silme/takas/değiştirme, kısaltmalar, eksik alanlar,
-farklı telefon/adres biçimleri, kaymış e-posta noktası). Her senaryo 5 farklı tohumla çalıştırılır.
+farklı telefon/adres biçimleri, kaymış e-posta noktası). Ek senaryolar farklı dosya biçimlerini dener: ayrı Ad/Soyad
+sütunları, unvan/cinsiyet/serbest metin sütunları, gmail/hotmail adresleri ve alan adı hataları. Her senaryo 5 farklı
+tohumla çalıştırılır.
 
-| Test | Satır | Kesinlik (yanlış birleştirme yok) | Duyarlılık (bulunan eşleşme) | Hücre doğruluğu önce → sonra | Kullanıcıya soru |
-|---|---|---|---|---|---|
-| Ham_Veri.xlsx (verilen dosya) | 96 | %100.0 (0 yanlış) | %100.0 | %43.3 → **%100.0** | 0 |
-| Sentetik - hafif kirlilik | 396 | %100.0 (0 yanlış) | %100.0 | %60.4 → **%99.6** | 17 |
-| Sentetik - orta kirlilik | 418 | %100.0 (0 yanlış) | %100.0 | %44.2 → **%99.3** | 26 |
-| Sentetik - ağır kirlilik | 405 | %100.0 (0 yanlış) | %100.0 | %33.8 → **%97.6** | 64 |
-| Sentetik - çok sayıda aynı isimli farklı kişi | 398 | %100.0 (0 yanlış) | %100.0 | %45.5 → **%98.8** | 31 |
-| Sentetik - %40 sözlükte olmayan isim | 417 | %100.0 (0 yanlış) | %99.7 | %44.0 → **%98.8** | 34 |
-| Sentetik - telefon/e-posta sütunu yok | 418 | %100.0 (0 yanlış) | %98.3 | %42.4 → **%99.5** | 31 |
+**3. Sanal kullanıcı:** Her test iki kez ölçülür. İlkinde hiçbir soru cevaplanmaz. İkincisinde gerçeği bilen bir
+"sanal kullanıcı" asistanın sorularını sırayla doğru cevaplar. Böylece sorulu tasarımın gerçekte ne kazandırdığı görülür.
 
-- **Kesinlik:** "aynı kişi" denen çiftlerin ne kadarı gerçekten aynı kişi. Yanlış birleştirme en zararlı hata
-  olduğu için sistem tasarımı bunu önceliklendirir.
-- **Duyarlılık:** gerçekte aynı kişi olan çiftlerin ne kadarı bulundu. (Şüpheli çiftler cevapsız = birleştirilmemiş sayıldı.)
+| Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
+|---|---|---|---|---|---|---|
+| Ham_Veri.xlsx (verilen dosya) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 38 | **%99.7** / %100.0 (0 yanlış) |
+| Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
+| Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.5** | 79 | **%98.1** / %100.0 (0 yanlış) |
+| Sentetik - çok sayıda aynı isimli farklı kişi | 398 | 0 (kesinlik %100.0) | %100.0 | %45.5 → **%98.8** | 65 | **%99.3** / %100.0 (0 yanlış) |
+| Sentetik - %40 sözlükte olmayan isim | 417 | 0 (kesinlik %100.0) | %99.7 | %44.0 → **%98.8** | 48 | **%99.3** / %100.0 (0 yanlış) |
+| Sentetik - telefon/e-posta sütunu yok | 418 | 0 (kesinlik %100.0) | %98.3 | %42.4 → **%99.2** | 50 | **%99.8** / %100.0 (0 yanlış) |
+| Sentetik - Ad ve Soyad ayrı sütunlarda | 418 | 0 (kesinlik %100.0) | %100.0 | %45.1 → **%98.9** | 63 | **%99.5** / %100.0 (0 yanlış) |
+| Sentetik - ek sütunlar (unvan, cinsiyet, serbest metin) | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 46 | **%99.6** / %100.0 (0 yanlış) |
+| Sentetik - gmail/hotmail adresleri + alan adı hataları | 418 | 0 (kesinlik %100.0) | %100.0 | %42.0 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
+| Sentetik - hepsi bir arada, ağır kirlilik | 382 | 0 (kesinlik %100.0) | %99.6 | %35.4 → **%98.0** | 88 | **%99.0** / %100.0 (0 yanlış) |
+
+- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
+- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru
+
+- **Yanlış birleştirme:** farklı kişilere ait olduğu hâlde "aynı kişi" denen satır çifti. En zararlı hata olduğu için
+  tasarım bunu önceliklendirir: tüm testlerde **0**.
+- **Bulunan eşleşme:** gerçekte aynı kişi olan çiftlerin ne kadarı bulundu.
 - **Hücre doğruluğu:** her hücrenin beklenen temiz değerle birebir aynı olma oranı.
 
 Kalan hataların büyük kısmı ilkesel olarak düzeltilemeyen durumlardır: tek kaydı olan kişinin boş alanı
@@ -133,6 +171,9 @@ Bu tür değerler sarı ile işaretlenip kullanıcıya sorulur.
 | Kimlik sütunu yokken 400 satırda ~290 soru | Kurum/adres çelişkisinde sorma, aynı gruplar için tek soru | 296 → 31 soru |
 | `ÇÜ` kısaltması `CÜ` (Cumhuriyet) ile karıştı | Önce birebir kısaltma, katlanmış çakışmalar belirsiz | |
 | `Miraç` → `Mira` düzeltildi | Türkçe harfi silen düzeltme yapılmaz | |
+| Aynı isimli farklı kişiler kullanıcıya hiç sorulmuyordu (kullanıcı geri bildirimi) | "Birleştireyim mi?" + "Hangisi doğru?" soruları | |
+| Grup içinde gerçekten farklı iki değer (iki üniversite) sessizce tek değere indiriliyordu | Yazım çeşidi / gerçek çelişki ayrımı, çelişkide sor | |
+| CSV okuyucu `12/11/1975`'i Amerikan tarihi sanıp 11 Aralık yaptı | CSV ham metin olarak okunur, tarih ayrıştırması bizde | |
 
 ## Yapay zekâ araçlarının kullanımı
 
@@ -142,8 +183,11 @@ Proje **Claude Code** (Anthropic) ile birlikte geliştirildi:
 - **Tasarım ve kod:** Eşleştirme kurallarının (kimlik bilgisi + isim + kurum/adres) tasarımı ve kodun yazılması.
   Kod bilinçli olarak sade tutuldu, her adım açıklama satırlarıyla anlatıldı.
 - **Sözlükler:** Üniversite, bölüm, il ve ad/soyad listelerinin hazırlanması.
-- **Test ve iyileştirme döngüsü:** Sentetik veri üreteci ve ölçüm betiği yazıldı; hatalar tek tek incelenip
-  yukarıdaki tablodaki iyileştirmeler yapıldı. Arayüz Playwright ile gerçek tarayıcıda denendi.
+- **Test ve iyileştirme döngüsü:** Sentetik veri üreteci, sanal kullanıcı ve ölçüm betiği yazıldı; hatalar tek tek
+  incelenip yukarıdaki tablodaki iyileştirmeler yapıldı. Arayüz Playwright ile gerçek tarayıcıda baştan sona denendi
+  (yükleme → sorular → geri al → hücre balonu → indirme).
+- **Kullanıcı geri bildirimi:** İlk sürümü deneyen kullanıcının "aynı isimden birden fazla kişi var, birleştirilsin mi
+  diye sorsun, hangisi doğru diye sorsun" geri bildirimi üzerine asistan tasarımı eklendi.
 
 Bütün kararlar (eşik değerleri, "benzer isim tek başına yetmez" ilkesi, emin olunamayınca sorma) test sonuçlarına
 bakılarak verildi ve README'de gerekçeleriyle açıklandı.

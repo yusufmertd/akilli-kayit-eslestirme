@@ -1,11 +1,17 @@
+import { fold } from '../engine/text.js';
+
 // Aynı kişiye ait olduğu tespit edilen kayıt grupları ve gerekçeleri
 export default function Groups({ result }) {
-  const nameCol = result.types.indexOf('name');
+  const nameCols = result.types.flatMap((t, c) => (t === 'name' ? [c] : []));
+  const nameOf = (r) => nameCols.map((c) => result.cells[r][c].value).filter(Boolean).join(' ');
+  const nameCount = new Map();
+  result.groups.forEach((g) => { const k = fold(nameOf(g[0])); nameCount.set(k, (nameCount.get(k) || 0) + 1); });
+
   const reasonsOf = (group) => {
     const set = new Set(group);
     const reasons = new Set();
     result.pairs.filter((p) => set.has(p.a) && set.has(p.b)).forEach((p) => p.reasons.forEach((x) => reasons.add(x)));
-    return [...reasons].join(', ');
+    return [...reasons].join(', ') || 'sizin onayınızla birleştirildi';
   };
 
   if (!result.groups.length) return <p className="muted">Aynı kişiye ait birden fazla kayıt bulunamadı.</p>;
@@ -13,27 +19,30 @@ export default function Groups({ result }) {
   return (
     <div className="groups">
       {result.groups.map((group, i) => (
-        <div key={i} className="group-card">
+        <div key={group[0]} className="group-card">
           <h3>
-            Grup {i + 1}: {nameCol >= 0 ? result.cells[group[0]][nameCol].value : ''}
-            <small> · {group.length} kayıt</small>
+            {i + 1}. {nameOf(group[0]) || 'Kişi'}
+            <small> · {result.summaries[i]}</small>
+            {nameCount.get(fold(nameOf(group[0]))) > 1 && <span className="badge">Aynı isimde başka kişi de var</span>}
           </h3>
-          <p className="muted">Gerekçe: {reasonsOf(group)}</p>
-          <table className="mini">
-            <thead><tr><th>Satır</th>{result.headers.map((h) => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>
-              {group.map((r) => (
-                <tr key={r}>
-                  <td>{r + 2}</td>
-                  {result.cells[r].map((cell, c) => (
-                    <td key={c} className={cell.status}>
-                      {cell.original || <i className="muted">boş</i>}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <p className="muted">Neden aynı kişi: {reasonsOf(group)}</p>
+          <div className="mini-wrap">
+            <table className="mini">
+              <thead><tr><th>Satır</th>{result.headers.map((h, c) => <th key={c}>{h}</th>)}</tr></thead>
+              <tbody>
+                {group.map((r) => (
+                  <tr key={r}>
+                    <td>{r + 2}</td>
+                    {result.cells[r].map((cell, c) => (
+                      <td key={c} title={cell.status !== 'same' ? `Yeni: ${cell.value}` : ''}>
+                        {cell.original || <i className="muted">boş</i>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ))}
     </div>

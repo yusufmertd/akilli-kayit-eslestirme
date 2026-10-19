@@ -133,7 +133,7 @@ export function makeDataset(seed, { persons = 40, level = 1, twins = 0.15, unkno
     const copies = 1 + Math.floor(rand() * 3);
     for (let c = 0; c < copies; c++) {
       rows.push(c === 0 && rand() < 0.4 ? cleanRow(p) : dirtyRow(p, rand, level));
-      truth.push({ person: p.id, clean: cleanRow(p) });
+      truth.push({ person: p.id, clean: cleanRow(p), p });
     }
   }
   // Satırları karıştır
@@ -143,4 +143,65 @@ export function makeDataset(seed, { persons = 40, level = 1, twins = 0.15, unkno
     [order[i], order[j]] = [order[j], order[i]];
   }
   return { headers: HEADERS, rows: order.map((i) => rows[i]), truth: order.map((i) => truth[i]) };
+}
+
+// Ek senaryolar: mevcut veri setini başka dosya biçimlerine dönüştürür (ayrı bir rastgele üreteçle).
+//  splitName    : "Ad_Soyad" yerine ayrı "Adı" ve "Soyadı" sütunları
+//  extraCols    : Unvan, Cinsiyet ve sözlüğü olmayan serbest bir "Kulüp" sütunu
+//  emailDomains : example.invalid yerine gmail/hotmail/outlook (+ "gmial.com" gibi hatalar)
+const TITLE_FORMS = {
+  'Öğrenci': ['ÖĞRENCİ', 'ogrenci', 'Ogrenci'],
+  'Arş. Gör.': ['Araştırma Görevlisi', 'ARŞ. GÖR.', 'Ars. Gor.', 'Arş Gör'],
+  'Öğr. Gör.': ['Öğretim Görevlisi', 'Ogr. Gor.', 'ÖĞR. GÖR.'],
+  'Prof. Dr.': ['Profesör', 'Prof Dr', 'PROF. DR.', 'prof. dr.'],
+  'Doç. Dr.': ['Doçent', 'Doc. Dr.', 'DOÇ. DR.'],
+  'Dr. Öğr. Üyesi': ['Yrd. Doç. Dr.', 'Dr. Ogr. Uyesi', 'Doktor Öğretim Üyesi'],
+};
+const GENDER_FORMS = { Kadın: ['K', 'kadın', 'KADIN', 'Bayan', 'Kadin'], Erkek: ['E', 'erkek', 'ERKEK', 'Bay'] };
+const CLUBS = ['Satranç Kulübü', 'Müzik Kulübü', 'Tiyatro Kulübü', 'Dağcılık Kulübü', 'Robotik Kulübü', 'Girişimcilik Kulübü'];
+const DOMAIN_TYPOS = { 'gmail.com': ['gmial.com', 'gmail.con', 'gmal.com'], 'hotmail.com': ['hotmial.com', 'hotmail.co'], 'outlook.com': ['outlok.com'] };
+
+export function extendDataset(data, seed, { splitName = false, extraCols = false, emailDomains = false } = {}) {
+  const rand = rng(seed);
+  const pick = (arr) => arr[Math.floor(rand() * arr.length)];
+  const extra = new Map(); // kişi -> ek bilgiler
+  const infoOf = (p) => {
+    if (!extra.has(p.id)) {
+      extra.set(p.id, {
+        title: pick(Object.keys(TITLE_FORMS)),
+        gender: rand() < 0.5 ? 'Kadın' : 'Erkek',
+        club: pick(CLUBS),
+        domain: pick(Object.keys(DOMAIN_TYPOS)),
+      });
+    }
+    return extra.get(p.id);
+  };
+  let headers = [...data.headers];
+  const rows = data.rows.map((r) => [...r]);
+  const truth = data.truth.map((t) => ({ ...t, clean: [...t.clean] }));
+
+  rows.forEach((row, i) => {
+    const t = truth[i];
+    const info = infoOf(t.p);
+    const noisy = rand() < 0.6;
+    if (emailDomains) {
+      t.clean[3] = t.clean[3].replace('@example.invalid', `@${info.domain}`);
+      const dom = noisy && rand() < 0.5 ? pick(DOMAIN_TYPOS[info.domain]) : info.domain;
+      row[3] = String(row[3]).replace(/@example\.invalid/i, `@${dom}`);
+    }
+    if (extraCols) {
+      const club = noisy ? [trUpper(info.club), trLower(info.club), asciify(info.club), typo(info.club, rand)][Math.floor(rand() * 4)] : info.club;
+      row.push(noisy ? pick(TITLE_FORMS[info.title]) : info.title, noisy ? pick(GENDER_FORMS[info.gender]) : info.gender, club);
+      t.clean.push(info.title, info.gender, info.club);
+    }
+    if (splitName) {
+      const [first, ...last] = String(row[0]).split(' ');
+      const [cFirst, ...cLast] = t.clean[0].split(' ');
+      row.splice(0, 1, first, last.join(' '));
+      t.clean.splice(0, 1, cFirst, cLast.join(' '));
+    }
+  });
+  if (extraCols) headers.push('Unvan', 'Cinsiyet', 'Kulup');
+  if (splitName) headers = ['Adı', 'Soyadı', ...headers.slice(1)];
+  return { headers, rows, truth };
 }

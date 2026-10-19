@@ -399,3 +399,96 @@ export const ADDRESS_WORDS = {
   apt: 'Apartmanı', ap: 'Apartmanı', apartmani: 'Apartmanı',
   sit: 'Sitesi', sitesi: 'Sitesi', meydani: 'Meydanı', kat: 'Kat', daire: 'Daire',
 };
+
+// Akademik / idari unvanlar. "Doğru Yazım|eş anlamlı yazımlar"
+export const TITLES = `
+Prof. Dr.|Profesör,Profesör Doktor,Prof,Prof Dr
+Doç. Dr.|Doçent,Doçent Doktor,Doç,Doç Dr
+Dr. Öğr. Üyesi|Doktor Öğretim Üyesi,Yrd. Doç. Dr.,Yardımcı Doçent,Yrd. Doç.,Dr Öğr Üyesi
+Öğr. Gör. Dr.|Doktor Öğretim Görevlisi
+Öğr. Gör.|Öğretim Görevlisi,Öğr Gör
+Arş. Gör. Dr.|Doktor Araştırma Görevlisi
+Arş. Gör.|Araştırma Görevlisi,Arş Gör
+Okutman|Okt.
+Uzman|Uzm.
+Dr.|Doktor
+Öğretim Üyesi
+Rektör
+Rektör Yardımcısı
+Dekan
+Dekan Yardımcısı
+Bölüm Başkanı
+Enstitü Müdürü
+Genel Sekreter
+Fakülte Sekreteri
+Şube Müdürü
+Şef
+Memur
+Bilgisayar İşletmeni
+Teknisyen
+Tekniker
+Mühendis
+Sekreter
+Öğrenci
+Mezun
+`;
+
+export const FACULTIES = `
+Mühendislik Fakültesi
+Mühendislik ve Doğa Bilimleri Fakültesi
+Mimarlık Fakültesi
+Mimarlık ve Tasarım Fakültesi
+Tıp Fakültesi
+Diş Hekimliği Fakültesi
+Eczacılık Fakültesi
+Sağlık Bilimleri Fakültesi
+Hemşirelik Fakültesi
+Veteriner Fakültesi
+Fen Fakültesi
+Edebiyat Fakültesi
+Fen-Edebiyat Fakültesi|FEF
+İnsan ve Toplum Bilimleri Fakültesi
+İktisadi ve İdari Bilimler Fakültesi|İİBF
+İşletme Fakültesi
+Siyasal Bilgiler Fakültesi|SBF
+Hukuk Fakültesi
+Eğitim Fakültesi
+İletişim Fakültesi
+Güzel Sanatlar Fakültesi
+İlahiyat Fakültesi
+Ziraat Fakültesi
+Orman Fakültesi
+Su Ürünleri Fakültesi
+Spor Bilimleri Fakültesi
+Turizm Fakültesi
+Teknoloji Fakültesi
+Denizcilik Fakültesi
+Havacılık ve Uzay Bilimleri Fakültesi
+Fen Bilimleri Enstitüsü
+Sosyal Bilimler Enstitüsü
+Sağlık Bilimleri Enstitüsü
+Eğitim Bilimleri Enstitüsü
+Meslek Yüksekokulu|MYO
+Yabancı Diller Yüksekokulu|YDYO
+`;
+
+export const DEGREES = `
+Ön Lisans|Önlisans,ÖL
+Lisans|Lisans Öğrencisi
+Yüksek Lisans|YL,Master,Yükseklisans,Tezli Yüksek Lisans
+Tezsiz Yüksek Lisans
+Doktora|PhD,Dr,Doktora Öğrencisi
+Bütünleşik Doktora
+Hazırlık|Hazırlık Sınıfı
+`;
+
+export const GENDERS = `
+Kadın|K,Kız,Bayan,F,Female,Woman
+Erkek|E,Bay,M,Male,Man
+`;
+
+// Sık kullanılan e-posta alan adları: "gmial.com" -> "gmail.com"
+export const EMAIL_DOMAINS = `gmail.com hotmail.com outlook.com yahoo.com icloud.com yandex.com live.com
+msn.com hotmail.com.tr outlook.com.tr yahoo.com.tr windowslive.com protonmail.com mail.com`;
+
+export const FACULTY_WORDS = { fak: 'Fakültesi', fakultesi: 'Fakültesi', enst: 'Enstitüsü', ens: 'Enstitüsü', yo: 'Yüksekokulu' };
