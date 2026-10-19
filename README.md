@@ -50,7 +50,7 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
      (neden: telefon aynı, e-posta aynı, kurum aynı…). Hepsini “Ahmet Yılmaz” olarak birleştirip düzelteyim mi?"*
      → Evet / Hayır, farklı kişiler / Kalanların hepsini onayla. "Hayır" denen kayıtlar birbirinden ayrılır.
    - **Aynı isimde birden fazla kişi:** *"“Ahmet Yılmaz” isminde 2 farklı kişi buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
-   - **Birleştirince çelişen bilgiler:** *"Ahmet Yılmaz için farklı Kurum bilgileri var. Hangisi doğru?"*
+   - **Birleştirince çelişen bilgiler:** *"Ahmet Yılmaz için farklı Bölüm bilgileri var. Hangisi doğru?"* (Kurumda sorulmaz, en uzun ad seçilir.)
      → seçenekler, "her kayıt kendi değerini korusun" veya serbest yazım.
    - **Şüpheli iki kayıt:** *"Bu iki kayıt aynı kişiye ait olabilir (benzerlik %80: isim aynı, kurum aynı). Aynı kişi mi?"*
    - **Emin olunamayan yazım:** *"Ad_Soyad sütununda “eymn blgin” yazıyor. Doğru yazımı “Eymen Bilgin” olabilir mi?"*
@@ -148,7 +148,10 @@ Her alanın değerleri önce **yazım çeşitleri** kümelerine ayrılır (`Ahme
 `Uludağ Ün.` ile `Hacettepe Ün.` ayrı kümeler).
 - **Tek küme (sadece yazım farkı):** adaylar puanlanır: diğer adaylara benzerlik toplamı (çoğunluk + "merkez" yazım)
   + sözlükte bulunma + Türkçe karakter + kullanıcı onayı. Kazanan gruptaki tüm satırlara yazılır, boşluklar doldurulur.
-- **Birden çok küme (gerçek çelişki):** algoritma tahmin etmez, **"Hangisi doğru?"** diye sorar. Cevap gelene kadar
+- **Kurum (üniversite) istisnası:** kurumda soru sorulmaz, **her zaman en uzun (en ayrıntılı) ad** seçilir
+  (`Uludağ Üniversitesi` / `Bursa Uludağ Üniv.` / `UÜ` → `Bursa Uludağ Üniversitesi`).
+- **Birden çok küme (gerçek çelişki):** algoritma tahmin etmez, **"Hangisi doğru?"** diye sorar.
+  Adreste kapı numarası farklıysa (`No: 8` / `No: 87`) bu da çelişki sayılır. Cevap gelene kadar
   her satır kendi değerini (düzeltilmiş hâliyle) korur.
 
 ### Adım 5 — Emin olunamayan durumlar

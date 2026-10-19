@@ -129,6 +129,18 @@ export function processTable(headers, rows, decisions = {}) {
         const choiceId = `${anchor}|${col}`;
         const choice = decisions.choices?.[choiceId];
 
+        // Kurum: soru sorulmaz, her zaman en uzun (en ayrıntılı) ad seçilir
+        // ("Uludağ Üniversitesi" / "Bursa Uludağ Üniversitesi" -> "Bursa Uludağ Üniversitesi")
+        if (type === 'institution' && choice === undefined) {
+          const best = longestValue(cands, type, chosenName);
+          for (const r of group) {
+            const own = cleaned[r][col];
+            const note = !own ? 'aynı kişinin diğer kaydından dolduruldu' : clusters.length > 1 ? 'en uzun kurum adı seçildi' : best.note || 'grup içi oylama';
+            final[r][col] = { ...best, sure: true, note };
+          }
+          continue;
+        }
+
         if (clusters.length > 1 && choice === undefined) {
           // Çelişki: her satır kendi değerinin en iyi yazımını korur, kullanıcıya sorulur
           for (const r of group) {
@@ -306,6 +318,8 @@ function clusterVariants(cands, type) {
   const same = (a, b) => {
     if (['phone', 'birthdate', 'tc', 'postal'].includes(type)) return a.value === b.value;
     if (type === 'email') return sameEmail(a.value, b.value);
+    // Adreste kapı numarası farklıysa (No: 8 / No: 87) aynı adres değildir
+    if (type === 'address' && a.value.replace(/\D/g, '') !== b.value.replace(/\D/g, '')) return false;
     return similarity(fold(a.value), fold(b.value)) >= 0.8;
   };
   const clusters = [];
@@ -335,6 +349,12 @@ function pickBest(candidates, type, chosenName) {
     if (score > bestScore) { best = c; bestScore = score; }
   }
   return best;
+}
+
+// En uzun değer; aynı uzunlukta birden fazla aday varsa en iyi yazım seçilir
+function longestValue(candidates, type, chosenName) {
+  const max = Math.max(...candidates.map((c) => c.value.length));
+  return pickBest(candidates.filter((c) => c.value.length === max), type, chosenName);
 }
 
 // Aynı e-postanın farklı yazımları mı? (içindeki sayılar aynı ve harfler çok benzer)
