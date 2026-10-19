@@ -1,5 +1,7 @@
 # Akıllı Kayıt Eşleştirme Sistemi
 
+**Canlı uygulama:** https://akilli-kayit-eslestirme.vercel.app
+
 Üniversite kayıt listelerindeki (öğrenci / katılımcı tabloları) yazım hatalarını düzelten, aynı kişiye ait
 farklı yazılmış kayıtları bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren web uygulaması.
 
@@ -156,4 +158,4 @@ npm run build    # yayın için derleme (dist/)
 node tests/make-sample.js   # arayüzde denemek için kirli örnek dosya üretir
 ```
 
-Vercel'e yayımlama: depo Vercel'e bağlanınca Vite projesi otomatik algılanır (Build: `npm run build`, Çıktı: `dist`).
+Vercel'de yayında: https://akilli-kayit-eslestirme.vercel.app (Vite, Build: `npm run build`, Çıktı: `dist`).
