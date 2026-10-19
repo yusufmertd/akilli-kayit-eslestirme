@@ -11,7 +11,11 @@
 //   rules:   { [sütun]: { [katlanmış değer]: "doğru yazım" } } -> kullanıcının yazdığı düzeltmeler
 //   cells:   { "satır-sütun": "değer" }             -> tek bir hücreye kullanıcının yazdığı değer
 //   types:   { [sütun]: "name" | "email" ... }      -> kullanıcının seçtiği sütun türü
-//   review:  'each' | 'all' | undefined             -> otomatik eşleşmeler tek tek mi onaylanacak, hepsi mi?
+//   mode:    'auto' | 'suspicious' | 'manual'       -> ne kadar soru sorulacak (varsayılan: 'suspicious')
+//            auto       : hiç soru yok, tüm kararları algoritma verir
+//            suspicious : sadece belirsiz eşleşmeler sorulur (aynı isimli kişiler, şüpheli çiftler)
+//            manual     : her eşleşme, her çelişki ve emin olunamayan her yazım sorulur
+//   review:  'all' | undefined                      -> manuel modda "kalan eşleşmelerin hepsini onayla" dendi mi?
 //   groups:  { "0,11,58": true | false }            -> otomatik bulunan grup onaylandı mı / reddedildi mi?
 
 import { fold, isEmpty, similarity, hasTurkishChars, titleCase, trUpper, trLower } from './text.js';
@@ -24,6 +28,9 @@ export const KEEP_OWN = '__her_satir_kendi__';
 // Grup içinde birleştirilen sütunlar (kişiye ait bilgiler, categories.js'de "person" işaretli).
 // Liste sırası kategori sırasıdır: isim önce gelir, e-posta seçiminde isim kullanılır.
 const PERSON_TYPES = CATEGORIES.filter((c) => c.person).map((c) => c.id);
+// Bu alanlarda çelişki hiç sorulmaz: her zaman en uzun (en ayrıntılı) değer seçilir
+// ("Uludağ Üniversitesi" / "Bursa Uludağ Üniversitesi", "Tıp Fak." / "Tıp Fakültesi")
+const LONGEST_TYPES = ['institution', 'faculty', 'department', 'highschool', 'district', 'position'];
 // Grup özetinde (kartlarda, sorularda) kişiyi tanıtmak için kullanılan alanlar
 const SUMMARY_TYPES = ['institution', 'department', 'city', 'phone', 'email'];
 
@@ -39,6 +46,9 @@ function detectAll(headers, rows) {
 }
 
 export function processTable(headers, rows, decisions = {}) {
+  const mode = decisions.mode || 'suspicious';
+  const askMatches = mode !== 'auto'; // eşleşme soruları (aynı isim, şüpheli çift)
+  const manual = mode === 'manual'; // her şey sorulur
   const detected = detectAll(headers, rows);
   const types = headers.map((_, c) => decisions.types?.[c] || detected[c].type);
   const typeReasons = headers.map((_, c) => (decisions.types?.[c] ? 'sizin seçiminiz' : detected[c].reason));
@@ -100,7 +110,7 @@ export function processTable(headers, rows, decisions = {}) {
       for (let i = 1; i < sameName.length; i++) links.push([sameName[0][0], sameName[i][0]]);
       sameName.flat().forEach((r) => userRows.add(r));
     }
-    if (answer !== undefined) continue;
+    if (answer !== undefined || !askMatches) continue; // otomatik modda aynı isimli kişiler ayrı tutulur
     nameQuestions.push({
       kind: 'name',
       id: `name|${key}`,
@@ -129,15 +139,29 @@ export function processTable(headers, rows, decisions = {}) {
         const choiceId = `${anchor}|${col}`;
         const choice = decisions.choices?.[choiceId];
 
-        // Kurum: soru sorulmaz, her zaman en uzun (en ayrıntılı) ad seçilir
-        // ("Uludağ Üniversitesi" / "Bursa Uludağ Üniversitesi" -> "Bursa Uludağ Üniversitesi")
-        if (type === 'institution' && choice === undefined) {
+        // Kurum, fakülte, bölüm...: soru sorulmaz, her zaman en uzun (en ayrıntılı) ad seçilir
+        if (LONGEST_TYPES.includes(type) && choice === undefined) {
           const best = longestValue(cands, type, chosenName);
           for (const r of group) {
             const own = cleaned[r][col];
-            const note = !own ? 'aynı kişinin diğer kaydından dolduruldu' : clusters.length > 1 ? 'en uzun kurum adı seçildi' : best.note || 'grup içi oylama';
+            const note = !own ? 'aynı kişinin diğer kaydından dolduruldu' : clusters.length > 1 ? 'en uzun (en ayrıntılı) ad seçildi' : best.note || 'grup içi oylama';
             final[r][col] = { ...best, sure: true, note };
           }
+          continue;
+        }
+
+        // E-posta: soru sorulmaz; birden fazla adres varsa kişinin adını taşıyan gerçek adres seçilir
+        // ("ahmet.yilmaz@..." tercih edilir, "ref16", "test", çok rakamlı adresler geri planda kalır)
+        if (type === 'email' && clusters.length > 1 && choice === undefined) {
+          const best = bestEmail(cands, chosenName);
+          for (const r of group) final[r][col] = { ...best, sure: true, note: cleaned[r][col] ? 'kişinin gerçek e-postası seçildi' : 'aynı kişinin diğer kaydından dolduruldu' };
+          continue;
+        }
+
+        // Diğer çelişkiler: manuel modda sorulur, diğer modlarda çoğunluğun değeri seçilir
+        if (clusters.length > 1 && choice === undefined && !manual) {
+          const best = pickBest(cands, type, chosenName);
+          for (const r of group) final[r][col] = { ...best, sure: true, note: cleaned[r][col] ? 'otomatik seçildi (çoğunluk)' : 'aynı kişinin diğer kaydından dolduruldu' };
           continue;
         }
 
@@ -203,6 +227,7 @@ export function processTable(headers, rows, decisions = {}) {
   const rejected = new Set(pairs.filter((p) => answerOf(p) === false).map(groupPair));
   const asked = new Map();
   for (const p of pairs) {
+    if (!askMatches) break; // otomatik modda şüpheli çiftler birleştirilmez, sorulmaz
     if (p.status !== 'unsure' || groupOf[p.a] === groupOf[p.b] || rejected.has(groupPair(p))) continue;
     const nameA = fold(records[p.a].name);
     if (nameA === fold(records[p.b].name) && (askedNames.has(nameA) || decisions.names?.[nameA] !== undefined)) continue;
@@ -210,9 +235,9 @@ export function processTable(headers, rows, decisions = {}) {
     if (!prev || p.score > prev.score) asked.set(groupPair(p), { kind: 'pair', id: `pair|${pairKey(p.a, p.b)}`, ...p, key: pairKey(p.a, p.b) });
   }
 
-  // Otomatik bulunan eşleşmeler: kullanıcı "tek tek göster" dediyse her grup için onay sorulur
+  // Otomatik bulunan eşleşmeler: sadece manuel modda her grup için onay sorulur
   const groupQuestions = [];
-  if (decisions.review === 'each') {
+  if (manual && decisions.review !== 'all') {
     groups.forEach((g, gi) => {
       if (g.length < 2 || g.some((r) => userRows.has(r))) return;
       const key = g.join(',');
@@ -230,11 +255,12 @@ export function processTable(headers, rows, decisions = {}) {
       });
     });
   }
-  const pendingGroups = groups.filter((g) => g.length > 1 && !g.some((r) => userRows.has(r)) && decisions.groups?.[g.join(',')] === undefined).length;
+  const pendingGroups = groupQuestions.length;
 
   const cellQuestions = [];
   const seen = new Set();
   cells.forEach((row, r) => row.forEach((cell, c) => {
+    if (!manual) return; // emin olunamayan yazımlar sadece manuel modda sorulur (diğerlerinde öneri uygulanır)
     if (!cell.unsure || !cell.original || cell.note.startsWith('aynı kişide')) return;
     const id = `cell|${c}|${fold(cell.original)}`;
     if (seen.has(id)) return;
@@ -349,6 +375,22 @@ function pickBest(candidates, type, chosenName) {
     if (score > bestScore) { best = c; bestScore = score; }
   }
   return best;
+}
+
+// E-postanın "gerçek kişi adresi" olma puanı: adı-soyadı içeriyorsa artı, ref16 / test / çok rakam varsa eksi
+function emailQuality(email, name) {
+  const local = email.split('@')[0];
+  const letters = local.replace(/[^a-z]/g, '');
+  const parts = fold(name).split(' ').filter((p) => p.length > 1);
+  let q = 0;
+  if (parts.length && parts.every((p) => letters.includes(p))) q += 2;
+  else if (parts.some((p) => p.length > 2 && letters.includes(p))) q += 1;
+  if (/ref\d*|test|dummy|deneme|noreply|\d{2,}/.test(local)) q -= 2;
+  return q;
+}
+function bestEmail(candidates, name) {
+  const max = Math.max(...candidates.map((c) => emailQuality(c.value, name)));
+  return pickBest(candidates.filter((c) => emailQuality(c.value, name) === max), 'email', name);
 }
 
 // En uzun değer; aynı uzunlukta birden fazla aday varsa en iyi yazım seçilir

@@ -43,26 +43,37 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
    "Üniv." veya bilinen üniversite → Üniversite · "Müh. / Öğretmenliği" → Bölüm · 81 il adı → Şehir · geçerli 11 hane →
    T.C. kimlik no · `TR..` → IBAN · `34 ABC 123` → Plaka · `K / E` → Cinsiyet · `TL / ₺ / $` → Para · `%` → Yüzde ·
    `0–4` arası ondalık → Not ortalaması · `A Rh+` → Kan grubu · `09:30` → Saat · `Evet / Hayır` · tarih · yıl · bilinen isim → Ad Soyad.
-3. **Asistan balonu** özet verir ve emin olamadığı konuları sırayla sorar. Her cevaptan sonra her şey yeniden hesaplanır:
-   - **Önce nasıl ilerleyeceğini sorar:** *"32 kişinin dosyada birden fazla kez geçtiğini buldum. Bu eşleşmeleri nasıl onaylamak
-     istersin?"* → **"Tek tek göster, ben karar vereyim"** veya **"Hepsini onayla, sadece şüphelileri sor"**.
-   - **Tek tek modunda her eşleşme için:** *"Bu 3 kayıt aynı kişiye ait görünüyor: Abmet Dılmaz, Ahmet Yilmaz, Ahmet Yılmaz
+3. **Mod seçimi** (araç çubuğunda; her zaman değiştirilebilir):
+
+   | Mod | Ne sorar? | Ham_Veri.xlsx'te soru sayısı |
+   |---|---|---|
+   | **Otomatik** | Hiçbir şey. Tüm kararları algoritma verir; emin olmadığı eşleşmeleri birleştirmez | 0 |
+   | **Şüphelileri göster** (varsayılan) | Sadece belirsiz eşleşmeler: aynı isimli farklı kişiler, şüpheli kayıt çiftleri | 2 |
+   | **Tam manuel** | Her eşleşme grubu, her çelişki, emin olunamayan her yazım | 34 |
+
+   Hiçbir modda sorulmayanlar: **harf hataları** (`Abmet Dılmaz` → `Ahmet Yılmaz` kendiliğinden düzeltilir),
+   **kurum / fakülte / bölüm / lise / ilçe / pozisyon** (her zaman en uzun, en ayrıntılı ad seçilir) ve **e-posta**
+   (kişinin adını taşıyan gerçek adres seçilir; `ref16`, `test`, çok rakamlı adresler geri planda kalır).
+4. **Asistan balonu** özet verir ve seçilen moda göre soruları sırayla sorar. Her cevaptan sonra her şey yeniden hesaplanır:
+   - **Tam manuel modda her eşleşme için:** *"Bu 3 kayıt aynı kişiye ait görünüyor: Abmet Dılmaz, Ahmet Yilmaz, Ahmet Yılmaz
      (neden: telefon aynı, e-posta aynı, kurum aynı…). Hepsini “Ahmet Yılmaz” olarak birleştirip düzelteyim mi?"*
      → Evet / Hayır, farklı kişiler / Kalanların hepsini onayla. "Hayır" denen kayıtlar birbirinden ayrılır.
    - **Aynı isimde birden fazla kişi:** *"“Ahmet Yılmaz” isminde 2 farklı kişi buldum (Uludağ · 3 kayıt / Hacettepe · 3 kayıt). Birleştireyim mi?"*
-   - **Birleştirince çelişen bilgiler:** *"Ahmet Yılmaz için farklı Bölüm bilgileri var. Hangisi doğru?"* (Kurumda sorulmaz, en uzun ad seçilir.)
+   - **Birleştirince çelişen bilgiler (tam manuel modda):** *"Ahmet Yılmaz için farklı Telefon bilgileri var. Hangisi doğru?"*
+     Diğer modlarda çoğunluğun değeri seçilir.
      → seçenekler, "her kayıt kendi değerini korusun" veya serbest yazım.
    - **Şüpheli iki kayıt:** *"Bu iki kayıt aynı kişiye ait olabilir (benzerlik %80: isim aynı, kurum aynı). Aynı kişi mi?"*
-   - **Emin olunamayan yazım:** *"Ad_Soyad sütununda “eymn blgin” yazıyor. Doğru yazımı “Eymen Bilgin” olabilir mi?"*
+   - **Emin olunamayan yazım (tam manuel modda):** *"Ad_Soyad sütununda “eymn blgin” yazıyor. Doğru yazımı “Eymen Bilgin” olabilir mi?"*
      Cevap aynı yazıma sahip **tüm** hücrelere uygulanır.
-   - **Son soru:** *"Her kişi tek satır olsun mu?"*
+   - **Son soru (tam manuel modda):** *"Her kişi tek satır olsun mu?"* Diğer modlarda görevdeki kurala uygun olarak
+     **tüm satırlar korunur**; istenirse araç çubuğundan "Tekrarları tek satıra indir" seçilebilir.
    - "Şimdilik atla" ve "Son cevabı geri al" her zaman kullanılabilir.
    - **Her butonun üzerine gelince** ne işe yaradığını anlatan kısa bir açıklama çıkar.
    - "Aynı kişiye ait kayıtlar" sekmesinde her grup gerekçesiyle listelenir; **"Doğru, aynı kişi"** / **"Ayır, farklı kişiler"**
      butonlarıyla sonradan da karar değiştirilebilir.
-4. Tabloda **yeşil** = düzeltildi, **mavi** = aynı kişinin diğer kaydından dolduruldu, **sarı** = emin değilim.
+5. Tabloda **yeşil** = düzeltildi, **mavi** = aynı kişinin diğer kaydından dolduruldu, **sarı** = emin değilim.
    Bir hücreye tıklayınca **hücre balonu** açılır: dosyadaki eski hâli, değişiklik gerekçesi, "doğru mu?" onayı ve düzeltme kutusu.
-5. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
+6. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
    şeklinde birleşir), grup numarası sütunu ekle.
 
 ## Ekran görüntüleri
@@ -148,9 +159,11 @@ Her alanın değerleri önce **yazım çeşitleri** kümelerine ayrılır (`Ahme
 `Uludağ Ün.` ile `Hacettepe Ün.` ayrı kümeler).
 - **Tek küme (sadece yazım farkı):** adaylar puanlanır: diğer adaylara benzerlik toplamı (çoğunluk + "merkez" yazım)
   + sözlükte bulunma + Türkçe karakter + kullanıcı onayı. Kazanan gruptaki tüm satırlara yazılır, boşluklar doldurulur.
-- **Kurum (üniversite) istisnası:** kurumda soru sorulmaz, **her zaman en uzun (en ayrıntılı) ad** seçilir
-  (`Uludağ Üniversitesi` / `Bursa Uludağ Üniv.` / `UÜ` → `Bursa Uludağ Üniversitesi`).
-- **Birden çok küme (gerçek çelişki):** algoritma tahmin etmez, **"Hangisi doğru?"** diye sorar.
+- **Kurum, fakülte, bölüm, lise, ilçe, pozisyon:** çelişkide soru sorulmaz, **her zaman en uzun (en ayrıntılı) ad**
+  seçilir (`Uludağ Üniversitesi` / `Bursa Uludağ Üniv.` / `UÜ` → `Bursa Uludağ Üniversitesi`).
+- **E-posta:** soru sorulmaz; adı ve soyadı içeren, `ref16` / `test` / çok rakam içermeyen gerçek kişi adresi seçilir.
+- **Diğer çelişkiler (telefon, adres, şehir...):** tam manuel modda **"Hangisi doğru?"** diye sorulur, diğer modlarda
+  çoğunluğun değeri seçilir.
   Adreste kapı numarası farklıysa (`No: 8` / `No: 87`) bu da çelişki sayılır. Cevap gelene kadar
   her satır kendi değerini (düzeltilmiş hâliyle) korur.
 
@@ -179,23 +192,26 @@ tohumla çalıştırılır.
 
 | Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
 |---|---|---|---|---|---|---|
-| Ham_Veri.xlsx (verilen dosya) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – eşleşmeler tek tek onaylanır | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
-| Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 38 | **%99.7** / %100.0 (0 yanlış) |
-| Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
-| Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.5** | 79 | **%98.1** / %100.0 (0 yanlış) |
-| Sentetik - çok sayıda aynı isimli farklı kişi | 398 | 0 (kesinlik %100.0) | %100.0 | %45.5 → **%98.8** | 65 | **%99.3** / %100.0 (0 yanlış) |
-| Sentetik - %40 sözlükte olmayan isim | 417 | 0 (kesinlik %100.0) | %99.7 | %44.0 → **%98.8** | 48 | **%99.3** / %100.0 (0 yanlış) |
-| Sentetik - telefon/e-posta sütunu yok | 418 | 0 (kesinlik %100.0) | %98.3 | %42.4 → **%99.2** | 50 | **%99.8** / %100.0 (0 yanlış) |
-| Sentetik - Ad ve Soyad ayrı sütunlarda | 418 | 0 (kesinlik %100.0) | %100.0 | %45.1 → **%98.9** | 63 | **%99.5** / %100.0 (0 yanlış) |
-| Sentetik - ek sütunlar (unvan, cinsiyet, serbest metin) | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 46 | **%99.6** / %100.0 (0 yanlış) |
-| Sentetik - gmail/hotmail adresleri + alan adı hataları | 418 | 0 (kesinlik %100.0) | %100.0 | %42.0 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
-| Sentetik - başlıklar anlamsız ("Sütun 1, Sütun 2…") | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 46 | **%99.6** / %100.0 (0 yanlış) |
-| Sentetik - hepsi bir arada, ağır kirlilik | 382 | 0 (kesinlik %100.0) | %99.6 | %35.4 → **%98.0** | 88 | **%99.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – şüphelileri göster modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Ham_Veri.xlsx – tam manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
+| Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 21 | **%99.6** / %100.0 (0 yanlış) |
+| Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 21 | **%99.1** / %100.0 (0 yanlış) |
+| Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.6** | 18 | **%97.6** / %100.0 (0 yanlış) |
+| Sentetik - çok sayıda aynı isimli farklı kişi | 398 | 0 (kesinlik %100.0) | %100.0 | %45.5 → **%98.8** | 35 | **%98.8** / %100.0 (0 yanlış) |
+| Sentetik - %40 sözlükte olmayan isim | 417 | 0 (kesinlik %100.0) | %99.7 | %44.0 → **%98.7** | 21 | **%98.7** / %99.7 (0 yanlış) |
+| Sentetik - telefon/e-posta sütunu yok | 418 | 0 (kesinlik %100.0) | %98.3 | %42.4 → **%99.2** | 23 | **%99.3** / %99.3 (0 yanlış) |
+| Sentetik - Ad ve Soyad ayrı sütunlarda | 418 | 0 (kesinlik %100.0) | %100.0 | %45.1 → **%99.3** | 21 | **%99.3** / %100.0 (0 yanlış) |
+| Sentetik - ek sütunlar (unvan, cinsiyet, serbest metin) | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 21 | **%99.4** / %100.0 (0 yanlış) |
+| Sentetik - gmail/hotmail adresleri + alan adı hataları | 418 | 0 (kesinlik %100.0) | %100.0 | %42.0 → **%99.1** | 21 | **%99.1** / %100.0 (0 yanlış) |
+| Sentetik - başlıklar anlamsız ("Sütun 1, Sütun 2…") | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 21 | **%99.4** / %100.0 (0 yanlış) |
+| Sentetik - hepsi bir arada, ağır kirlilik | 382 | 0 (kesinlik %100.0) | %99.6 | %35.4 → **%98.5** | 24 | **%98.5** / %99.6 (0 yanlış) |
 
 - Kategori tanıma (58 kategori; başlıktan ve başlık anlamsızsa içerikten): 55 / 55 örnek doğru
 - Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
 - Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru
+
+Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülmüştür.
 
 - **Yanlış birleştirme:** farklı kişilere ait olduğu hâlde "aynı kişi" denen satır çifti. En zararlı hata olduğu için
   tasarım bunu önceliklendirir: tüm testlerde **0**.
@@ -220,6 +236,7 @@ Bu tür değerler sarı ile işaretlenip kullanıcıya sorulur.
 | Aynı isimli farklı kişiler kullanıcıya hiç sorulmuyordu (kullanıcı geri bildirimi) | "Birleştireyim mi?" + "Hangisi doğru?" soruları | |
 | Grup içinde gerçekten farklı iki değer (iki üniversite) sessizce tek değere indiriliyordu | Yazım çeşidi / gerçek çelişki ayrımı, çelişkide sor | |
 | CSV okuyucu `12/11/1975`'i Amerikan tarihi sanıp 11 Aralık yaptı | CSV ham metin olarak okunur, tarih ayrıştırması bizde | |
+| Çok fazla soru soruluyordu (kullanıcı geri bildirimi: "her şeyi tek tek sormasın") | 3 mod; harf hatası, kurum/fakülte, e-posta hiç sorulmaz | Ağır kirlilikte 79 → 18 soru, doğruluk aynı |
 | "Üniversite" başlığının içindeki "site" yüzünden sütun Web sitesi sanıldı | Başlık kuralları kelime sınırıyla | CSV testi 0/5 → 5/5 |
 | "Ankara" değerleri "Ankara Üniversitesi" sanıldı; "Dil Seviyesi" → Yabancı dil | İçerik testlerinde şehir önce, kategori sırası düzeltildi | Tanıma 53/55 → 55/55 |
 | Başlıksız sütunlarda içerik tahmini her cevapta yeniden yapılıyordu (yavaş) | Tahmin dosya başına bir kez yapılıp saklanır | |

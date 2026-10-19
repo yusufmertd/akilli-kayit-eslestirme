@@ -10,7 +10,8 @@ import Groups from './components/Groups.jsx';
 // Bir sayfa için kullanıcının tüm kararları (algoritma bunlarla yeniden çalışır)
 const emptyDecisions = () => ({
   pairs: {}, names: {}, choices: {}, rules: {}, cells: {}, types: {}, groups: {},
-  review: undefined, // otomatik eşleşmeler: 'each' = tek tek sor, 'all' = hepsini onayla
+  mode: 'suspicious', // 'auto' = hiç sorma, 'suspicious' = sadece şüphelileri sor, 'manual' = her şeyi sor
+  review: undefined, // manuel modda "kalan eşleşmelerin hepsini onayla" denirse 'all'
   dedupe: null, // null = henüz sorulmadı
   withGroup: false,
   skipped: [],
@@ -146,10 +147,12 @@ export default function App() {
         </div>
       </section>
 
+      <ModeSwitch mode={d.mode} onChange={(m) => decide((x) => { x.mode = m; x.skipped = []; return x; })} />
+
       <Assistant
         result={result}
         sheet={sheet}
-        review={d.review}
+        mode={d.mode}
         dedupe={d.dedupe}
         skipped={d.skipped}
         onAnswer={answer}
@@ -171,8 +174,27 @@ export default function App() {
 
       {tab === 'table'
         ? <ResultTable result={result} collapsed={collapsed} onCorrect={correct} onType={setType} />
-        : <Groups result={result} confirmed={d.groups} review={d.review} onAnswer={answer} />}
+        : <Groups result={result} confirmed={d.groups} manual={d.mode === 'manual' && d.review !== 'all'} onAnswer={answer} />}
     </main>
+  );
+}
+
+// Soru sorma düzeyi: kullanıcı ne kadar karar vermek istediğini seçer
+const MODES = [
+  ['auto', 'Otomatik', 'Hiç soru sormaz: eşleşmeleri, yazım düzeltmelerini ve çelişkileri algoritma çözer. Emin olmadığı eşleşmeleri birleştirmez.'],
+  ['suspicious', 'Şüphelileri göster', 'Önerilen: sadece belirsiz eşleşmeleri sorar (aynı isimli kişiler, şüpheli kayıt çiftleri). Gerisini kendisi düzeltir.'],
+  ['manual', 'Tam manuel', 'Her eşleşmeyi, her çelişkiyi ve emin olamadığı her yazımı tek tek sorar.'],
+];
+function ModeSwitch({ mode, onChange }) {
+  return (
+    <div className="modes" role="radiogroup" aria-label="Soru sorma modu">
+      <span className="muted small">Mod:</span>
+      {MODES.map(([id, label, tip]) => (
+        <button key={id} role="radio" aria-checked={mode === id} className={mode === id ? 'on' : ''} data-tip={tip} onClick={() => onChange(id)}>
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

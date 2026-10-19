@@ -1,7 +1,7 @@
 import { fold } from '../engine/text.js';
 
 // Aynı kişiye ait olduğu tespit edilen kayıt grupları ve gerekçeleri
-export default function Groups({ result, confirmed, review, onAnswer }) {
+export default function Groups({ result, confirmed, manual, onAnswer }) {
   const nameCols = result.types.flatMap((t, c) => (t === 'name' ? [c] : []));
   const nameOf = (r) => nameCols.map((c) => result.cells[r][c].value).filter(Boolean).join(' ');
   const nameCount = new Map();
@@ -24,9 +24,10 @@ export default function Groups({ result, confirmed, review, onAnswer }) {
             {i + 1}. {nameOf(group[0]) || 'Kişi'}
             <small> · {result.summaries[i]}</small>
             {nameCount.get(fold(nameOf(group[0]))) > 1 && <span className="badge">Aynı isimde başka kişi de var</span>}
-            {confirmed[group.join(',')] === true || review === 'all'
-              ? <span className="badge ok">Onaylandı</span>
-              : <span className="badge">Onay bekliyor</span>}
+            {confirmed[group.join(',')] === true && <span className="badge ok">Onaylandı</span>}
+            {confirmed[group.join(',')] !== true && (manual
+              ? <span className="badge">Onay bekliyor</span>
+              : <span className="badge ok">Otomatik eşleşti</span>)}
           </h3>
           <p className="muted">Neden aynı kişi: {reasonsOf(group)}</p>
           <div className="buttons">

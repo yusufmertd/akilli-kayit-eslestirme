@@ -48,8 +48,8 @@ function cellMetrics(rows, cells, expected, cols) {
 }
 
 // Sanal kullanıcı: gerçeği bilir, sistemin sorularını doğru cevaplar. Soru kalmayana kadar devam eder.
-function answerQuestions(headers, rows, personOf, expected, review) {
-  const d = { pairs: {}, names: {}, choices: {}, rules: {}, cells: {}, groups: {}, review };
+function answerQuestions(headers, rows, personOf, expected, mode) {
+  const d = { pairs: {}, names: {}, choices: {}, rules: {}, cells: {}, groups: {}, mode };
   let res = processTable(headers, rows, d);
   let answered = 0;
   for (let round = 0; round < 200 && res.questions.length; round++) {
@@ -66,9 +66,9 @@ function answerQuestions(headers, rows, personOf, expected, review) {
   return { res, answered };
 }
 
-function measure(headers, rows, personOf, expected, cols, review) {
-  const plain = processTable(headers, rows, { review });
-  const { res: asked, answered } = answerQuestions(headers, rows, personOf, expected, review);
+function measure(headers, rows, personOf, expected, cols, mode = 'suspicious') {
+  const plain = processTable(headers, rows, { mode });
+  const { res: asked, answered } = answerQuestions(headers, rows, personOf, expected, mode);
   return {
     rows: rows.length,
     questions: plain.questions.length,
@@ -78,7 +78,8 @@ function measure(headers, rows, personOf, expected, cols, review) {
   };
 }
 
-function evalSample(review) {
+const MODE_NAMES = { auto: 'otomatik mod (hiç soru yok)', suspicious: 'şüphelileri göster modu', manual: 'tam manuel mod' };
+function evalSample(mode = 'suspicious') {
   const wb = XLSX.readFile(`${dir}data/Ham_Veri.xlsx`);
   const [headers, ...rows] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
   const gold = JSON.parse(fs.readFileSync(`${dir}data/Ham_Veri_dogru_gruplar.json`, 'utf8')).gruplar;
@@ -89,8 +90,7 @@ function evalSample(review) {
   const webRow = {};
   rows.forEach((r) => { if (r[8] === 'Web Başvurusu') webRow[personOfId[r[0]]] = r; });
   const expected = rows.map((r) => webRow[personOfId[r[0]]].map(String));
-  const name = review === 'each' ? 'Ham_Veri.xlsx – eşleşmeler tek tek onaylanır' : 'Ham_Veri.xlsx (verilen dosya)';
-  return { name, ...measure(headers, rows, personOf, expected, [1, 2, 3, 4, 5, 6, 7], review) };
+  return { name: `Ham_Veri.xlsx – ${MODE_NAMES[mode]}`, ...measure(headers, rows, personOf, expected, [1, 2, 3, 4, 5, 6, 7], mode) };
 }
 
 function evalSynthetic(name, options, variant = {}, { dropIds = false, blankHeaders = false } = {}) {
@@ -192,8 +192,9 @@ async function evalCsvFixture() {
 }
 
 const results = [
-  evalSample(),
-  evalSample('each'),
+  evalSample('auto'),
+  evalSample('suspicious'),
+  evalSample('manual'),
   evalSynthetic('Sentetik - hafif kirlilik', { level: 0 }),
   evalSynthetic('Sentetik - orta kirlilik', { level: 1 }),
   evalSynthetic('Sentetik - ağır kirlilik', { level: 2 }),
@@ -234,6 +235,7 @@ if (process.argv.includes('--hatalar')) {
 fs.writeFileSync(`${dir}SONUCLAR.md`, `# Test Sonuçları
 
 Komut: \`npm test\` (sentetik testler 5 farklı tohumla üretilir, toplam sonuç verilir).
+Sentetik testler varsayılan **"şüphelileri göster"** modunda ölçülür.
 
 - **Yanlış birleştirme:** farklı kişilere ait olduğu hâlde "aynı kişi" denen satır çifti sayısı (en zararlı hata).
 - **Bulunan eşleşme:** gerçekte aynı kişiye ait satır çiftlerinin ne kadarının bulunduğu.

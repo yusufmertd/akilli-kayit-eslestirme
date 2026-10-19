@@ -178,9 +178,9 @@ export function cleanName(raw, ctx) {
     })
     .join(' ');
   const note = !sure ? 'isim sözlükte yok' : fuzzy ? 'harf hatası düzeltildi' : '';
-  // Harf hatası düzeltmesi yapılan isimler (ör. Abmet -> Ahmet) kullanıcıya kontrol için gösterilir.
   // known: ismin sözlükte bulunan kelimelerinin oranı (0..1), grup içi seçimde kullanılır
-  return result(value, sure && !fuzzy, knownCount / tokens.length, note);
+  // Sözlükle düzeltilen harf hataları (Abmet Dılmaz -> Ahmet Yılmaz) kesin kabul edilir, kullanıcıya sorulmaz
+  return result(value, sure, knownCount / tokens.length, note);
 }
 
 export function cleanInstitution(raw, ctx) {
