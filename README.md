@@ -65,6 +65,15 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
 5. **Excel indir** veya **CSV indir**. İsteğe bağlı: tekrarları tek satıra indir (kimlik sütunları `R001, R012, R059`
    şeklinde birleşir), grup numarası sütunu ekle.
 
+## Ekran görüntüleri
+
+| | |
+|---|---|
+| ![Giriş](docs/ekranlar/1-giris.png) Giriş: 3 adım ve örnek dosyalar | ![Onay modu](docs/ekranlar/2-eslesme-onay-modu.png) Asistan: eşleşmeleri nasıl onaylamak istersin? |
+| ![Grup](docs/ekranlar/3-grup-birlestireyim-mi.png) "Abmet Dılmaz / Ahmet Yilmaz / Ahmet Yılmaz: birleştireyim mi?" | ![Aynı isim](docs/ekranlar/4-ayni-isim-farkli-kisi.png) Aynı isimde 2 farklı kişi |
+| ![Hangisi doğru](docs/ekranlar/5-hangisi-dogru.png) Birleştirince: hangi kurum doğru? | ![Hücre balonu](docs/ekranlar/6-hucre-balonu.png) Hücre balonu: eski hâli, gerekçe, düzeltme |
+| ![Gruplar](docs/ekranlar/7-gruplar-sekmesi.png) Gruplar sekmesi ve buton açıklaması | ![İçerikten tanıma](docs/ekranlar/8-icerikten-tur-tanima.png) Başlıksız dosyada türler içerikten tanındı |
+
 ## Eşleştirme sistemi nasıl çalışır?
 
 Kod `src/engine/` klasöründedir ve arayüzden bağımsızdır (Node.js'te de test edilir).
