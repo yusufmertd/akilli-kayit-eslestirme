@@ -492,3 +492,117 @@ export const EMAIL_DOMAINS = `gmail.com hotmail.com outlook.com yahoo.com icloud
 msn.com hotmail.com.tr outlook.com.tr yahoo.com.tr windowslive.com protonmail.com mail.com`;
 
 export const FACULTY_WORDS = { fak: 'Fakültesi', fakultesi: 'Fakültesi', enst: 'Enstitüsü', ens: 'Enstitüsü', yo: 'Yüksekokulu' };
+
+// Ülkeler / uyruk (sık geçenler). "Doğru Yazım|eş anlamlılar"
+export const COUNTRIES = `
+Türkiye|TR,TC,T.C.,Turkey,Türkiye Cumhuriyeti,Turkiye,Türk
+Almanya|DE,Germany,Deutschland,Alman
+Azerbaycan|AZ,Azerbaijan,Azeri
+Kazakistan|KZ,Kazakhstan
+Özbekistan|UZ,Uzbekistan
+Türkmenistan|TM,Turkmenistan
+Kırgızistan|KG,Kyrgyzstan
+Kuzey Kıbrıs Türk Cumhuriyeti|KKTC,TRNC,Kuzey Kıbrıs
+Gürcistan|GE,Georgia
+Suriye|SY,Syria,Suriyeli
+Irak|IQ,Iraq,Iraklı
+İran|IR,Iran,İranlı
+Afganistan|AF,Afghanistan
+Mısır|EG,Egypt
+Libya|LY,Libya
+Somali|SO,Somalia
+Yemen|YE
+Ürdün|JO,Jordan
+Filistin|PS,Palestine
+Lübnan|LB,Lebanon
+Suudi Arabistan|SA,Saudi Arabia
+Rusya|RU,Russia,Rusya Federasyonu
+Ukrayna|UA,Ukraine
+Bulgaristan|BG,Bulgaria
+Yunanistan|GR,Greece
+Bosna-Hersek|BA,Bosnia,Bosna Hersek
+Arnavutluk|AL,Albania
+Kosova|XK,Kosovo
+Makedonya|MK,Kuzey Makedonya,Macedonia
+Fransa|FR,France
+İngiltere|UK,GB,Birleşik Krallık,United Kingdom,England
+Amerika Birleşik Devletleri|ABD,USA,US,United States,Amerika
+Hollanda|NL,Netherlands
+Belçika|BE,Belgium
+İtalya|IT,Italy
+İspanya|ES,Spain
+Avusturya|AT,Austria
+İsviçre|CH,Switzerland
+İsveç|SE,Sweden
+Çin|CN,China
+Japonya|JP,Japan
+Güney Kore|KR,Korea,Kore
+Hindistan|IN,India
+Pakistan|PK
+Nijerya|NG,Nigeria
+`;
+
+export const LANGUAGES = `
+Türkçe|TR,Turkish,Türk dili
+İngilizce|EN,ENG,English,İng.,Ingilizce
+Almanca|DE,German,Deutsch,Alm.
+Fransızca|FR,French,Fr.
+İspanyolca|ES,Spanish
+İtalyanca|IT,Italian
+Rusça|RU,Russian
+Arapça|AR,Arabic
+Farsça|FA,Persian
+Çince|ZH,Chinese
+Japonca|JA,Japanese
+Korece|KO,Korean
+Yunanca|EL,Greek
+Kürtçe|KU,Kurdish
+Azerice|AZ,Azerbaijani
+`;
+
+export const LANGUAGE_LEVELS = `
+A1|Başlangıç,Beginner
+A2|Temel,Elementary
+B1|Orta,Intermediate
+B2|İyi,Orta Üstü,Upper Intermediate
+C1|İleri,Advanced
+C2|Çok İleri,Proficient,Uzman
+Ana Dil|Anadil,Native,Ana dili
+`;
+
+export const MARITAL = `
+Evli|Married,E
+Bekar|Bekâr,Single,B
+Boşanmış|Divorced,Boşanmis
+Dul|Widowed
+`;
+
+export const EDU_TYPES = `
+Örgün Öğretim|Örgün,Normal Öğretim,NÖ,I. Öğretim,Birinci Öğretim,1. Öğretim,Gündüz
+İkinci Öğretim|İÖ,II. Öğretim,2. Öğretim,Gece,Akşam
+Uzaktan Öğretim|Uzaktan,UE,Uzaktan Eğitim,Online,Çevrimiçi
+Açıköğretim|AÖF,Açık Öğretim,Açıköğretim Fakültesi
+`;
+
+export const STATUSES = `
+Aktif|Active,Devam Ediyor,Devam
+Pasif|Passive,Inactive
+Onaylandı|Onaylı,Approved,Kabul,Kabul Edildi
+Beklemede|Bekliyor,Pending,Değerlendirmede
+Reddedildi|Ret,Red,Rejected
+İptal|İptal Edildi,Cancelled,Canceled
+Tamamlandı|Tamam,Completed,Bitti
+Kayıtlı|Kayıt Oldu,Registered
+Mezun|Graduated
+Dondurdu|Kayıt Dondurma,Dondurulmuş
+`;
+
+export const EMPLOYMENT = `
+Tam Zamanlı|Full Time,Full-time,Tam Zaman,Tam Gün
+Yarı Zamanlı|Part Time,Part-time,Yarı Zaman,Yarım Gün
+Stajyer|Staj,Intern,Stajer
+Sözleşmeli|Sözleşme,Contract
+Uzaktan|Remote,Evden
+Serbest|Freelance,Serbest Çalışan
+Gönüllü|Volunteer
+`;

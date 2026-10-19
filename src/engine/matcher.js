@@ -40,10 +40,14 @@ export function compareRecords(a, b) {
 
   const phoneMatch = same('phone');
   const phoneConflict = differs('phone');
+  const tcMatch = same('tc'); // T.C. kimlik no: en güçlü kimlik bilgisi
+  const tcConflict = differs('tc');
   const emailSim = both('email') ? emailSimilarity(a.email, b.email) : null;
   const emailMatch = emailSim !== null && emailSim >= 0.9;
   const emailConflict = emailSim !== null && emailSim < 0.8;
 
+  if (tcMatch) reasons.push('T.C. kimlik no aynı');
+  if (tcConflict) reasons.push('T.C. kimlik no farklı');
   if (phoneMatch) reasons.push('telefon aynı');
   if (phoneConflict) reasons.push('telefon farklı');
   if (emailMatch) reasons.push(emailSim === 1 ? 'e-posta aynı' : 'e-posta neredeyse aynı');
@@ -54,13 +58,14 @@ export function compareRecords(a, b) {
   if (differs('address')) reasons.push('adres farklı');
   if (same('department')) reasons.push('bölüm aynı');
 
-  const idMatch = phoneMatch || emailMatch;
-  const conflict = phoneConflict || emailConflict;
+  const idMatch = phoneMatch || emailMatch || tcMatch;
+  const conflict = phoneConflict || emailConflict || tcConflict;
 
   // 0-100 arası güven puanı (yalnızca kullanıcıya göstermek için)
   let score = nameSim * 40;
   if (phoneMatch) score += 30;
   if (emailMatch) score += 30;
+  if (tcMatch) score += 40;
   if (same('institution')) score += 10;
   if (same('address')) score += 15;
   if (same('department')) score += 5;

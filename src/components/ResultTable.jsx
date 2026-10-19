@@ -1,23 +1,8 @@
 import { useState } from 'react';
 import { fold } from '../engine/text.js';
+import { CATEGORY_GROUPS, categoryOf } from '../engine/categories.js';
 
-export const TYPE_LABELS = {
-  name: 'Ad / Soyad',
-  institution: 'Üniversite / Kurum',
-  faculty: 'Fakülte / Enstitü',
-  department: 'Bölüm',
-  title: 'Unvan',
-  degree: 'Öğrenim düzeyi',
-  gender: 'Cinsiyet',
-  email: 'E-posta',
-  phone: 'Telefon',
-  address: 'Adres',
-  city: 'Şehir',
-  date: 'Tarih',
-  id: 'Kimlik / No (dokunma)',
-  number: 'Sayı (dokunma)',
-  text: 'Diğer metin',
-};
+const GROUP_LABELS = { Kişi: 'Kişi bilgileri', İletişim: 'İletişim', Eğitim: 'Eğitim', İş: 'İş', Kayıt: 'Kayıt / Etkinlik', Genel: 'Genel biçimler', Diğer: 'Diğer' };
 
 const STATUS_TEXT = { fixed: 'Düzeltildi', filled: 'Aynı kişinin diğer kaydından dolduruldu', same: 'Değişmedi' };
 
@@ -43,9 +28,15 @@ export default function ResultTable({ result, collapsed, onCorrect, onType }) {
               {result.headers.map((h, c) => (
                 <th key={c}>
                   {h}
-                  <select value={result.types[c]} onChange={(e) => onType(c, e.target.value)} title="Sütun türü yanlışsa buradan değiştirin">
-                    {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
+                  <span className="type-pick" data-tip={`${categoryOf(result.types[c]).hint}. Neden bu tür: ${result.typeReasons[c]}. Yanlışsa listeden değiştirin.`}>
+                    <select value={result.types[c]} onChange={(e) => onType(c, e.target.value)} aria-label={`${h} sütununun türü`}>
+                      {CATEGORY_GROUPS.map(({ group, items }) => (
+                        <optgroup key={group} label={GROUP_LABELS[group] || group}>
+                          {items.map((cat) => <option key={cat.id} value={cat.id} title={cat.hint}>{cat.label}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </span>
                 </th>
               ))}
             </tr>

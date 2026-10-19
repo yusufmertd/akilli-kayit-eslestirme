@@ -1,4 +1,5 @@
-// Sütun türünü tahmin eder ve her hücreyi türüne göre temizler.
+// Hücre temizleyicileri: her sütun türü (kategori) için değeri düzeltir.
+// Hangi sütunun hangi türde olduğuna categories.js karar verir.
 // Her temizleyici şunu döner: { value, sure, known, note }
 //   sure  : algoritma bu düzeltmeden emin mi?
 //   known : sonuç sözlükte bulunan resmi bir yazım mı?
@@ -8,52 +9,9 @@ import {
   squeeze, isEmpty, titleCase, fold, trLower, trUpper, hasTurkishChars, similarity, closestWord, editDistance,
 } from './text.js';
 import {
-  UNIVERSITIES, DEPARTMENTS, CITIES, FIRST_NAMES, SURNAMES, COMMON_WORDS, TITLES, FACULTIES, DEGREES, GENDERS,
+  UNIVERSITIES, DEPARTMENTS, CITIES, FIRST_NAMES, SURNAMES, COMMON_WORDS, TITLES, FACULTIES,
   EMAIL_DOMAINS, INSTITUTION_WORDS, DEPARTMENT_WORDS, ADDRESS_WORDS, FACULTY_WORDS, parseList, words,
 } from './dictionaries.js';
-
-// ---------- Sütun türü tespiti ----------
-
-// Sıra önemli: ilk eşleşen tür kazanır ("ogrenci_no" önce kimlik/no olarak yakalanır).
-const HEADER_HINTS = [
-  ['email', /e_?posta|mail/],
-  ['phone', /tel|gsm|cep/],
-  ['date', /tarih|date|dogum/],
-  ['gender', /cinsiyet|gender|^cins$/],
-  ['title', /unvan|kadro|gorev|title/],
-  ['degree', /ogrenim|derece|seviye|egitim_?durum|program_?tur|kademe/],
-  ['faculty', /fakulte|enstitu|yuksekokul/],
-  ['id', /(^|_)(id|no|kod|numara|numarasi)$|sira|(^|_)tc(_|$)|kimlik|sicil/],
-  ['number', /(^|_)yas(_|$)|(^|_)not(u|_|$)|puan|ortalama|gpa|agno|sinif|kredi|maas|ucret/],
-  ['name', /ad_?soyad|isim|soyad|soyisim|^ad$|^adi$|name|ogrenci|katilimci|kisi|personel|calisan/],
-  ['institution', /kurum|universite|okul|kurulus|sirket|firma|isyeri/],
-  ['department', /bolum|departman|program|birim|anabilim/],
-  ['address', /adres/],
-  ['city', /sehir|^il$|^il_|_il$|city|memleket/],
-];
-
-const FIRST_NAME_KEYS = new Set(words(FIRST_NAMES).map(fold));
-const CITY_KEYS = new Set(words(CITIES).map(fold));
-const GENDER_KEYS = new Set(['k', 'e', 'kadin', 'erkek', 'kiz', 'bay', 'bayan', 'f', 'm', 'male', 'female']);
-
-export function detectColumnType(header, values) {
-  const h = fold(header).replace(/ /g, '_');
-  for (const [type, re] of HEADER_HINTS) if (re.test(h)) return type;
-
-  // Başlık bir şey söylemiyorsa içeriğe bak
-  const filled = values.filter((v) => !isEmpty(v)).map((v) => squeeze(v));
-  if (!filled.length) return 'text';
-  const ratio = (test) => filled.filter(test).length / filled.length;
-  if (ratio((v) => v.includes('@')) > 0.6) return 'email';
-  if (ratio((v) => /^[\d\s()+-]{10,}$/.test(v)) > 0.6) return 'phone';
-  if (ratio((v) => /^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$|^\d{4}-\d{2}-\d{2}/.test(v)) > 0.6) return 'date';
-  if (ratio((v) => /^-?\d+([.,]\d+)?$/.test(v)) > 0.8) return 'number';
-  if (ratio((v) => GENDER_KEYS.has(fold(v))) > 0.8) return 'gender';
-  if (ratio((v) => CITY_KEYS.has(fold(v))) > 0.6) return 'city';
-  if (ratio((v) => /univ|unv|üni/i.test(v)) > 0.5) return 'institution';
-  if (ratio((v) => /^\S+( \S+){1,2}$/.test(v) && FIRST_NAME_KEYS.has(fold(v.split(' ')[0]))) > 0.5) return 'name';
-  return 'text';
-}
 
 // ---------- Sözlükleri hazırlama ----------
 
@@ -88,10 +46,6 @@ function buildLookup(list) {
 
 const UNI = buildLookup(uniList);
 const DEPT = buildLookup(deptList);
-const TITLE = buildLookup(parseList(TITLES));
-const FACULTY = buildLookup(parseList(FACULTIES));
-const DEGREE = buildLookup(parseList(DEGREES));
-const GENDER = buildLookup(parseList(GENDERS));
 const DOMAINS = words(EMAIL_DOMAINS);
 const CITY = new Map(words(CITIES).map((c) => [fold(c), c]));
 
@@ -245,14 +199,25 @@ export function cleanInstitution(raw, ctx) {
   return result(fixWords(raw, ctx, INSTITUTION_WORDS), false, false, 'kurum sözlükte yok');
 }
 
-// Sözlüğü olan genel kategori sütunları (unvan, fakülte, öğrenim, cinsiyet) için ortak temizleyici
-function categoryCleaner(table, expansions, label) {
-  return (raw, ctx) => {
-    const hit = lookup(raw, table, expansions);
-    if (hit) return result(hit.value, hit.sure, true, hit.how);
-    return result(fixWords(raw, ctx, expansions), false, false, `${label} sözlükte yok`);
+// Sözlüğü olan kategori sütunları (unvan, fakülte, cinsiyet, ülke, dil...) için ortak temizleyici.
+// has(): değer sözlükte var mı? (sütun türünü içerikten tahmin ederken kullanılır)
+export function dictionary(listText, expansions = {}, label = 'değer') {
+  const table = buildLookup(parseList(listText));
+  return {
+    clean(raw, ctx) {
+      const hit = lookup(raw, table, expansions);
+      if (hit) return result(hit.value, hit.sure, true, hit.how);
+      return result(fixWords(raw, ctx, expansions), false, false, `${label} sözlükte yok`);
+    },
+    has: (v) => Boolean(lookup(String(v), table, expansions)),
   };
 }
+
+// İçerikten tür tahmini için: değer bir üniversite / bölüm adı mı?
+export const isUniversity = (v) => Boolean(lookup(String(v), UNI, INSTITUTION_WORDS, 'universitesi'));
+export const isDepartment = (v) => Boolean(lookup(String(v), DEPT, DEPARTMENT_WORDS));
+export const FIRST_NAME_KEYS = new Set(words(FIRST_NAMES).map(fold));
+export const CITY_KEYS = new Set(words(CITIES).map(fold));
 
 export function cleanDepartment(raw, ctx) {
   const hit = lookup(raw, DEPT, DEPARTMENT_WORDS);
@@ -337,21 +302,3 @@ export function cleanText(raw, ctx) {
   }).join(' ');
   return result(fixed, true, false, fixed !== text ? 'Türkçe karakter düzeltildi' : '');
 }
-
-export const CLEANERS = {
-  name: cleanName,
-  institution: cleanInstitution,
-  department: cleanDepartment,
-  city: cleanCity,
-  email: cleanEmail,
-  phone: cleanPhone,
-  address: cleanAddress,
-  title: categoryCleaner(TITLE, {}, 'unvan'),
-  faculty: categoryCleaner(FACULTY, FACULTY_WORDS, 'fakülte'),
-  degree: categoryCleaner(DEGREE, {}, 'öğrenim düzeyi'),
-  gender: categoryCleaner(GENDER, {}, 'cinsiyet'),
-  date: cleanDate,
-  number: keepAsIs,
-  id: keepAsIs,
-  text: cleanText,
-};

@@ -11,7 +11,7 @@ export default function Assistant({ result, sheet, review, dedupe, skipped, onAn
   const askMode = review === undefined && result.pendingGroups > 0; // önce "nasıl ilerleyelim?" sorulur
 
   let body;
-  if (askMode) body = <ReviewModeQuestion count={result.pendingGroups} onAnswer={onAnswer} />;
+  if (askMode) body = <ReviewModeQuestion count={result.pendingGroups} example={groupExample(result, sheet)} onAnswer={onAnswer} />;
   else if (q) body = <Question key={q.id} q={q} result={result} sheet={sheet} onAnswer={onAnswer} />;
   else if (dedupe === null && stats.duplicates > 0) body = <DedupeQuestion stats={stats} onAnswer={onAnswer} />;
   else body = <Done stats={stats} dedupe={dedupe} skippedCount={skipped.length} onUnskipAll={onUnskipAll} onDownload={onDownload} />;
@@ -39,13 +39,24 @@ export default function Assistant({ result, sheet, review, dedupe, skipped, onAn
   );
 }
 
+// Dosyadan gerçek bir örnek: aynı kişinin farklı yazılmış iki ismi ("Abmet Dılmaz" / "Ahmet Yılmaz")
+function groupExample(result, sheet) {
+  const nameCols = result.types.flatMap((t, c) => (t === 'name' ? [c] : []));
+  const nameOf = (r) => nameCols.map((c) => String(sheet.rows[r][c] ?? '').trim()).filter(Boolean).join(' ');
+  for (const g of result.groups) {
+    const names = [...new Set(g.map(nameOf).filter(Boolean))];
+    if (names.length > 1) return names.slice(0, 2);
+  }
+  return null;
+}
+
 // Otomatik eşleşmeleri kullanıcı tek tek mi onaylamak ister, yoksa hepsine güvenir mi?
-function ReviewModeQuestion({ count, onAnswer }) {
+function ReviewModeQuestion({ count, example, onAnswer }) {
   return (
     <div className="ask">
       <p>
-        Telefon, e-posta, kurum ve adres bilgilerine bakarak <b>{count} kişinin</b> dosyada birden fazla kez
-        (farklı yazımlarla) geçtiğini buldum. Örneğin “Abmet Dılmaz” ile “Ahmet Yılmaz” aynı kişi olabilir.
+        Telefon, e-posta, kimlik no, kurum ve adres bilgilerine bakarak <b>{count} kişinin</b> dosyada birden fazla kez
+        geçtiğini buldum.{example && <> Örneğin “{example[0]}” ile “{example[1]}” aynı kişi olabilir.</>}
       </p>
       <p>Bu eşleşmeleri nasıl onaylamak istersin?</p>
       <div className="buttons">

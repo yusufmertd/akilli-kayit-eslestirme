@@ -15,21 +15,33 @@
 //   groups:  { "0,11,58": true | false }            -> otomatik bulunan grup onaylandı mı / reddedildi mi?
 
 import { fold, isEmpty, similarity, hasTurkishChars, titleCase, trUpper, trLower } from './text.js';
-import { detectColumnType, buildContext, CLEANERS } from './fields.js';
+import { buildContext } from './fields.js';
+import { CATEGORIES, CLEANERS, categoryOf, detectColumnType } from './categories.js';
 import { findPairs, buildGroups } from './matcher.js';
 
 export const KEEP_OWN = '__her_satir_kendi__';
 
-// Grup içinde birleştirilen sütunlar (kişiye ait bilgiler). İsim önce gelir; e-posta seçiminde isim kullanılır.
-const PERSON_TYPES = ['name', 'institution', 'faculty', 'department', 'title', 'degree', 'gender', 'city', 'address', 'date', 'email', 'phone'];
-const CATEGORY_TYPES = ['institution', 'faculty', 'department', 'title', 'degree', 'gender', 'city', 'text'];
+// Grup içinde birleştirilen sütunlar (kişiye ait bilgiler, categories.js'de "person" işaretli).
+// Liste sırası kategori sırasıdır: isim önce gelir, e-posta seçiminde isim kullanılır.
+const PERSON_TYPES = CATEGORIES.filter((c) => c.person).map((c) => c.id);
 // Grup özetinde (kartlarda, sorularda) kişiyi tanıtmak için kullanılan alanlar
 const SUMMARY_TYPES = ['institution', 'department', 'city', 'phone', 'email'];
 
 export const pairKey = (a, b) => `${Math.min(a, b)}-${Math.max(a, b)}`;
 
+// Sütun türü tahmini sadece dosyaya bağlıdır: her cevaptan sonra yeniden hesaplanmasın diye bellekte tutulur
+const detectionCache = new WeakMap();
+function detectAll(headers, rows) {
+  const key = headers.join('\u0001');
+  const cached = detectionCache.get(rows);
+  if (cached?.key !== key) detectionCache.set(rows, { key, value: headers.map((h, c) => detectColumnType(h, rows.map((r) => r[c]))) });
+  return detectionCache.get(rows).value;
+}
+
 export function processTable(headers, rows, decisions = {}) {
-  const types = headers.map((h, c) => decisions.types?.[c] || detectColumnType(h, rows.map((r) => r[c])));
+  const detected = detectAll(headers, rows);
+  const types = headers.map((_, c) => decisions.types?.[c] || detected[c].type);
+  const typeReasons = headers.map((_, c) => (decisions.types?.[c] ? 'sizin seçiminiz' : detected[c].reason));
   const ctx = buildContext(types.map((type, c) => ({ type, values: rows.map((r) => r[c]) })));
   const colsOf = (type) => types.flatMap((t, c) => (t === type ? [c] : []));
   const nameCols = colsOf('name'); // "Ad" ve "Soyad" ayrı sütun olabilir
@@ -47,14 +59,15 @@ export function processTable(headers, rows, decisions = {}) {
 
   // 3) Sütun içi tek yazım
   types.forEach((type, c) => {
-    if (CATEGORY_TYPES.includes(type)) harmonizeColumn(cleaned.map((r) => r[c]), type);
+    const cat = categoryOf(type);
+    if (cat.harmonize) harmonizeColumn(cleaned.map((r) => r[c]), Boolean(cat.generic));
   });
 
   // 4) Kayıt eşleştirme
   const fullName = (cellsOfRow) => nameCols.map((c) => cellsOfRow[c]?.value).filter(Boolean).join(' ');
   const records = cleaned.map((r) => {
     const rec = { name: fullName(r) };
-    for (const type of ['email', 'phone', 'institution', 'department', 'address', 'city']) {
+    for (const type of ['email', 'phone', 'tc', 'institution', 'department', 'address', 'city']) {
       const c = colsOf(type)[0];
       rec[type] = c === undefined ? '' : r[c]?.value ?? '';
     }
@@ -222,6 +235,7 @@ export function processTable(headers, rows, decisions = {}) {
   return {
     headers,
     types,
+    typeReasons,
     cells,
     groups: multi,
     groupOf,
@@ -243,7 +257,7 @@ export function processTable(headers, rows, decisions = {}) {
 }
 
 // Tekrarları tek satıra indirilmiş tablo: her kişi için bir satır (grubun ilk satırı kalır).
-// Kimlik, sayı ve serbest metin sütunlarında gruptaki farklı değerler virgülle birleştirilir (R001, R012, R059).
+// Kişiye ait olmayan sütunlarda (kayıt no, kaynak, tarih...) gruptaki farklı değerler virgülle birleştirilir (R001, R012, R059).
 export function collapseRows(result, rawRows) {
   const ownValue = (r, c) => (result.cells[r][c].status === 'same' ? rawRows[r][c] : result.cells[r][c].value);
   const groupOfAnchor = new Map(result.groups.map((g) => [g[0], g]));
@@ -252,7 +266,7 @@ export function collapseRows(result, rawRows) {
     if (hidden.has(r)) return [];
     const group = groupOfAnchor.get(r) || [r];
     const values = result.headers.map((__, c) => {
-      if (group.length === 1 || !['id', 'text', 'number'].includes(result.types[c])) return ownValue(r, c);
+      if (group.length === 1 || categoryOf(result.types[c]).person) return ownValue(r, c);
       const distinct = [...new Set(group.map((x) => String(ownValue(x, c) ?? '')).filter(Boolean))];
       return distinct.length > 1 ? distinct.join(', ') : ownValue(r, c);
     });
@@ -290,7 +304,7 @@ function summarize(group, cellsByRow, types) {
 // ("Ahmet Yılmaz" ~ "Abmet Dılmaz" aynı küme; "Uludağ Üniversitesi" ile "Hacettepe Üniversitesi" ayrı kümeler)
 function clusterVariants(cands, type) {
   const same = (a, b) => {
-    if (type === 'phone' || type === 'date') return a.value === b.value;
+    if (['phone', 'birthdate', 'tc', 'postal'].includes(type)) return a.value === b.value;
     if (type === 'email') return sameEmail(a.value, b.value);
     return similarity(fold(a.value), fold(b.value)) >= 0.8;
   };
@@ -357,7 +371,8 @@ const writingQuality = (v) => (hasTurkishChars(v) ? 0.5 : 0) + (v !== trUpper(v)
 //  a) Katlanınca aynı olan yazımlar ("COCA COLA", "coca cola", "Coca Cola") en iyi yazıma indirilir
 //  b) Sözlük dışı bir değer, sütundaki çok benzer (%88+) daha güvenilir bir değere çekilir (yazım hatası)
 //  c) Serbest metin sütununda çoğunluk normal yazılmışsa TAMAMI BÜYÜK / tamamı küçük değerler düzeltilir
-function harmonizeColumn(cells, type) {
+// generic: serbest metin türü (sözlüğü yok) mü?
+function harmonizeColumn(cells, generic) {
   const filled = cells.filter(Boolean);
   const forms = new Map(); // katlanmış -> hücreler
   for (const cell of filled) {
@@ -378,7 +393,7 @@ function harmonizeColumn(cells, type) {
   }
 
   // b) Serbest metin sütunlarında sadece "kategori gibi" (değerleri tekrar eden) sütunlarda yapılır
-  const categorical = type !== 'text' || forms.size <= filled.length * 0.6;
+  const categorical = !generic || forms.size <= filled.length * 0.6;
   if (categorical) {
     for (const [k, group] of forms) {
       if (group[0].known) continue;
@@ -398,7 +413,7 @@ function harmonizeColumn(cells, type) {
   }
 
   // c)
-  if (type === 'text') {
+  if (generic) {
     const lettered = filled.filter((c) => /\p{L}{2}/u.test(c.value) && !/[@\d]/.test(c.value));
     const normal = lettered.filter((c) => c.value !== trUpper(c.value) && c.value !== trLower(c.value));
     if (lettered.length >= 3 && normal.length / lettered.length >= 0.6) {

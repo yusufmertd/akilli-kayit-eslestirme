@@ -107,6 +107,7 @@ export default function App() {
           Dosyanız yok mu? Örnekle deneyin:
           <button className="link" data-tip="Yarışmanın örnek dosyasını (96 satır) yükler" onClick={() => trySample('Ham_Veri.xlsx')}>Ham_Veri.xlsx</button>
           <button className="link" data-tip="Unvan, cinsiyet, kulüp sütunları ve ağır yazım hataları olan zor bir örnek yükler" onClick={() => trySample('Zor_Ornek.xlsx')}>Zor örnek (unvan, cinsiyet, ağır hatalar)</button>
+          <button className="link" data-tip="Sütun başlıkları 'Sütun 1, Sütun 2…' olan bir dosya: site her sütunun ne olduğunu içeriğinden tanır" onClick={() => trySample('Basliksiz_Ornek.xlsx')}>Başlıksız örnek (içerikten tanıma)</button>
         </p>
       </main>
     );

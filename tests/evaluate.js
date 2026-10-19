@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx/xlsx.mjs';
 import { processTable, KEEP_OWN } from '../src/engine/pipeline.js';
 import { fold } from '../src/engine/text.js';
 import { findHeaderRow } from '../src/engine/table.js';
+import { detectColumnType, CATEGORIES } from '../src/engine/categories.js';
 import { makeDataset, extendDataset } from './generate.js';
 import { readFile } from '../src/io.js';
 
@@ -92,7 +93,7 @@ function evalSample(review) {
   return { name, ...measure(headers, rows, personOf, expected, [1, 2, 3, 4, 5, 6, 7], review) };
 }
 
-function evalSynthetic(name, options, variant = {}, { dropIds = false } = {}) {
+function evalSynthetic(name, options, variant = {}, { dropIds = false, blankHeaders = false } = {}) {
   const total = { name, rows: 0, questions: 0, answered: 0, plain: {}, asked: {} };
   const add = (into, m) => {
     for (const k of ['tp', 'fp', 'fn', 'before', 'after', 'total']) into[k] = (into[k] || 0) + m[k];
@@ -107,6 +108,7 @@ function evalSynthetic(name, options, variant = {}, { dropIds = false } = {}) {
       rows = rows.map((r) => keep.map((c) => r[c]));
       expected = expected.map((r) => keep.map((c) => r[c]));
     }
+    if (blankHeaders) headers = headers.map((_, c) => `Sütun ${c + 1}`); // türler sadece içerikten tahmin edilmeli
     const m = measure(headers, rows, truth.map((t) => t.person), expected, headers.map((_, c) => c));
     total.rows += m.rows;
     total.questions += m.questions;
@@ -126,6 +128,50 @@ function evalHeaderDetection() {
   ];
   const expectedRows = [0, 2, 2];
   return cases.filter((c, i) => findHeaderRow(c) === expectedRows[i]).length === cases.length;
+}
+
+// Kategori tanıma: başlıktan ve (başlık anlamsızsa) içerikten doğru kategori bulunuyor mu?
+const DETECTION_CASES = [
+  // [başlık, örnek değerler, beklenen kategori]
+  ['Ad Soyad', ['Ahmet Yılmaz'], 'name'], ['Öğrenci Adı', ['Ali'], 'name'], ['Soyadı', ['Kaya'], 'name'],
+  ['E-posta Adresi', ['a@b.com'], 'email'], ['Cep Telefonu', ['05551112233'], 'phone'], ['Posta Kodu', ['06800'], 'postal'],
+  ['Üniversite', ['ODTÜ'], 'institution'], ['Fakülte', ['Tıp Fak.'], 'faculty'], ['Bölümü', ['Bilgisayar Müh.'], 'department'],
+  ['İş Unvanı', ['Yazılım Uzmanı'], 'position'], ['Akademik Unvan', ['Prof. Dr.'], 'title'], ['Doğum Yeri', ['Bursa'], 'birthplace'],
+  ['Doğum Tarihi', ['01.01.2000'], 'birthdate'], ['Kayıt Tarihi', ['01.01.2024'], 'regDate'], ['Medeni Durum', ['Evli'], 'marital'],
+  ['Eğitim Durumu', ['Lisans'], 'degree'], ['Öğretim Türü', ['İÖ'], 'eduType'], ['Burs Durumu', ['Var'], 'scholarship'],
+  ['Katıldı mı?', ['Evet'], 'attendance'], ['Not', ['85', '90'], 'score'], ['Not', ['geç geldi'], 'note'], ['Web Sitesi', ['x.com'], 'url'],
+  ['Kan Grubu', ['A Rh+'], 'blood'], ['Öğrenci No', ['2021001'], 'studentNo'], ['Yabancı Dil', ['İngilizce'], 'language'],
+  ['Dil Seviyesi', ['B2'], 'langLevel'], ['T.C. Kimlik No', ['10000000146'], 'tc'], ['Şirket Adı', ['Aselsan A.Ş.'], 'company'],
+  ['Kayit_Kaynagi', ['Web'], 'source'], ['IBAN', ['TR33...'], 'iban'], ['Plaka', ['34 ABC 123'], 'plate'], ['İlçe', ['Kadıköy'], 'district'],
+  // Başlık anlamsız: sadece içerikten
+  ['Sütun A', ['ali@gmail.com', 'veli@hotmail.com'], 'email'],
+  ['Sütun B', ['0555 111 22 33', '+90 532 111 2233', '5321112233'], 'phone'],
+  ['Sütun C', ['Yeni Mah. Bilim Cad. No 8', 'Merkez Mahallesi, Akademi Sokak No: 5'], 'address'],
+  ['Sütun D', ['Uludağ Üniv.', 'ODTÜ', 'Hacettepe Universitesi'], 'institution'],
+  ['Sütun E', ['Bilgisayar Mühendisliği', 'Endüstri Müh.', 'Psikoloji'], 'department'],
+  ['Sütun F', ['Ankara', 'İSTANBUL', 'izmir'], 'city'],
+  ['Sütun G', ['Ahmet Yılmaz', 'Zeynep Kaya', 'Can Özdemir'], 'name'],
+  ['Sütun H', ['10000000146', '10000000078'], 'tc'],
+  ['Sütun I', ['TR33 0006 1005 1978 6457 8413 26'], 'iban'],
+  ['Sütun J', ['K', 'E', 'Kadın', 'erkek'], 'gender'],
+  ['Sütun K', ['12.05.1998', '1998-03-05'], 'date'],
+  ['Sütun L', ['1.250 TL', '₺300', '45,50 tl'], 'money'],
+  ['Sütun M', ['%45', '30%'], 'percent'],
+  ['Sütun N', ['Prof. Dr.', 'Arş. Gör.', 'Doçent'], 'title'],
+  ['Sütun O', ['Lisans', 'Yüksek Lisans', 'Doktora'], 'degree'],
+  ['Sütun P', ['www.odtu.edu.tr', 'https://itu.edu.tr'], 'url'],
+  ['Sütun R', ['3,45', '2.80', '3.1'], 'gpa'],
+  ['Sütun S', ['2019', '2021', '2020'], 'year'],
+  ['Sütun T', ['A Rh+', '0 Rh-'], 'blood'],
+  ['Sütun U', ['34 ABC 123', '06 E 1234'], 'plate'],
+  ['Sütun V', ['Mühendislik Fakültesi', 'Tıp Fak.'], 'faculty'],
+  ['Sütun Y', ['09:30', '14:00'], 'time'],
+  ['Sütun Z', ['Evet', 'Hayır', 'evet'], 'boolean'],
+];
+function evalDetection() {
+  const wrong = DETECTION_CASES.filter(([h, v, exp]) => detectColumnType(h, v).type !== exp)
+    .map(([h, v, exp]) => `${h} [${v[0]}] -> ${detectColumnType(h, v).type} (beklenen ${exp})`);
+  return { ok: DETECTION_CASES.length - wrong.length, total: DETECTION_CASES.length, wrong };
 }
 
 // Gerçek hayattan zor bir CSV: Windows-1254 kodlama, ";" ayraç, üstte başlık satırı, ayrı Ad/Soyad,
@@ -157,6 +203,7 @@ const results = [
   evalSynthetic('Sentetik - Ad ve Soyad ayrı sütunlarda', { level: 1 }, { splitName: true }),
   evalSynthetic('Sentetik - ek sütunlar (unvan, cinsiyet, serbest metin)', { level: 1 }, { extraCols: true }),
   evalSynthetic('Sentetik - gmail/hotmail adresleri + alan adı hataları', { level: 1 }, { emailDomains: true }),
+  evalSynthetic('Sentetik - başlıklar anlamsız ("Sütun 1, Sütun 2…")', { level: 1 }, { extraCols: true }, { blankHeaders: true }),
   evalSynthetic('Sentetik - hepsi bir arada, ağır kirlilik', { level: 2, twins: 0.3 }, { splitName: true, extraCols: true, emailDomains: true }),
 ];
 
@@ -172,7 +219,9 @@ for (const r of results) {
 }
 const headerOk = evalHeaderDetection();
 const csvOk = await evalCsvFixture();
-const table = `${lines.join('\n')}\n\n- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): ${headerOk ? 'tüm örnekler doğru' : 'HATALI'}\n- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (\`tests/data/Windows1254_noktali_virgul.csv\`): ${csvOk}`;
+const det = evalDetection();
+if (det.wrong.length) console.log('Kategori tanıma hataları:', det.wrong);
+const table = `${lines.join('\n')}\n\n- Kategori tanıma (${CATEGORIES.length} kategori; başlıktan ve başlık anlamsızsa içerikten): ${det.ok} / ${det.total} örnek doğru\n- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): ${headerOk ? 'tüm örnekler doğru' : 'HATALI'}\n- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (\`tests/data/Windows1254_noktali_virgul.csv\`): ${csvOk}`;
 console.log(table);
 
 if (process.argv.includes('--hatalar')) {

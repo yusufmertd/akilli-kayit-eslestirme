@@ -25,7 +25,24 @@ Ahmet Yılmaz │ Uludağ Üniversitesi │ Bilgisayar Mühendisliği │ Yeni M
 
 1. Excel veya CSV dosyasını sürükleyip bırakın ya da **örnek dosyayla deneyin**. Çok sayfalı Excel, üstünde
    başlık/açıklama satırı olan tablolar ve Türkçe Windows kodlamalı, `;` ayraçlı CSV'ler de okunur.
-2. Sütun türleri başlıktan, başlık tanıdık değilse **içerikten** tahmin edilir (yanlışsa başlıktaki listeden değiştirilebilir).
+2. Her sütunun türü **58 kategoriden** biri olarak tahmin edilir. Önce başlığa, başlık anlamsızsa ("Sütun 1") **içeriğe**
+   bakılır. Başlığın üzerine gelince neden o türün seçildiği görünür (ör. *"değerlerde @ işareti var (%100)"*).
+   Yanlışsa başlıktaki gruplu listeden değiştirilebilir:
+
+   | Grup | Kategoriler |
+   |---|---|
+   | Kişi bilgileri | Ad/Soyad, Cinsiyet, Doğum tarihi, Doğum yeri, Yaş, T.C. kimlik no, Uyruk, Medeni durum, Kan grubu, Akademik unvan |
+   | İletişim | E-posta, Telefon, Adres, İlçe/Semt, İl/Şehir, Posta kodu, Web sitesi, Sosyal medya hesabı |
+   | Eğitim | Öğrenci no, Üniversite/Kurum, Fakülte/Enstitü, Bölüm/Program, Öğrenim düzeyi, Öğretim türü, Sınıf, Not ortalaması, Mezuniyet/giriş yılı, Dil seviyesi, Yabancı dil, Mezun olduğu lise, Burs durumu |
+   | İş | Şirket/Firma, Departman/Birim, Pozisyon/Meslek, Sektör, Çalışma şekli, Maaş, İşe başlama tarihi |
+   | Kayıt / Etkinlik | Kayıt/başvuru tarihi, Kayıt kaynağı, Durum, Katılım (Evet/Hayır), Ücret/Tutar, Saat, Kategori/Etiket, Puan/Skor, Not/Açıklama |
+   | Genel biçimler | Kimlik/No, IBAN, Araç plakası, Tarih, Yüzde, Para tutarı, Yıl, Evet/Hayır, Ülke, Sayı |
+   | Diğer | Serbest metin (genel kurallar) |
+
+   **İçerikten tanıma örnekleri:** `@` → E-posta · `05…`, `+90…` → Telefon · "Mah. / Cad. / Sk. / No" → Adres ·
+   "Üniv." veya bilinen üniversite → Üniversite · "Müh. / Öğretmenliği" → Bölüm · 81 il adı → Şehir · geçerli 11 hane →
+   T.C. kimlik no · `TR..` → IBAN · `34 ABC 123` → Plaka · `K / E` → Cinsiyet · `TL / ₺ / $` → Para · `%` → Yüzde ·
+   `0–4` arası ondalık → Not ortalaması · `A Rh+` → Kan grubu · `09:30` → Saat · `Evet / Hayır` · tarih · yıl · bilinen isim → Ad Soyad.
 3. **Asistan balonu** özet verir ve emin olamadığı konuları sırayla sorar. Her cevaptan sonra her şey yeniden hesaplanır:
    - **Önce nasıl ilerleyeceğini sorar:** *"32 kişinin dosyada birden fazla kez geçtiğini buldum. Bu eşleşmeleri nasıl onaylamak
      istersin?"* → **"Tek tek göster, ben karar vereyim"** veya **"Hepsini onayla, sadece şüphelileri sor"**.
@@ -56,7 +73,8 @@ Kod `src/engine/` klasöründedir ve arayüzden bağımsızdır (Node.js'te de t
 |---|---|
 | `text.js` | Türkçe büyük/küçük harf, karşılaştırma anahtarı, Damerau-Levenshtein mesafesi |
 | `dictionaries.js` | 196 üniversite + kısaltmaları, 119 bölüm, 36 fakülte/enstitü, akademik unvanlar, öğrenim düzeyleri, 81 il, ~430 Türkçe ad/soyad, e-posta alan adları |
-| `fields.js` | Sütun türü tespiti (başlık + içerik) ve her tür için temizleyici |
+| `categories.js` | 58 sütun kategorisi: başlık ipucu, içerikten tanıma kuralı, temizleyici, açıklama |
+| `fields.js` | Ad, kurum, bölüm, e-posta, telefon, adres, tarih gibi alanların temizleyicileri |
 | `table.js` | Başlık satırını bulma (üstte açıklama satırları olan dosyalar için) |
 | `matcher.js` | İki kaydın aynı kişi olup olmadığına karar verme, gruplama |
 | `pipeline.js` | Tüm adımları sırayla çalıştıran ana akış |
@@ -91,6 +109,10 @@ karşılaştırmayı bozmaz. (Türkçe'ye özgü `I/ı`, `İ/i` dönüşümleri 
   yazıma indirilir; sözlükte olmayan değerler sütundaki çok benzer (%88+) daha sık bir değere çekilir; dosyanın başka
   yerinde Türkçe karakterle yazılmış kelimeler düzeltilir; çoğunluk normal yazılmışsa TAMAMI BÜYÜK değerler düzeltilir.
   Kimlik, sayı (yaş, not, puan) sütunlarına dokunulmaz.
+- **Biçim kategorileri:** T.C. kimlik no ve IBAN kontrol hanesiyle doğrulanır; para (`1250 tl` → `1.250 TL`), yüzde,
+  not ortalaması (`3.456` → `3,46`), kan grubu (`a rh+` → `A Rh+`), sınıf (`birinci sınıf` → `1. Sınıf`), saat, plaka,
+  web adresi, sosyal medya (`instagram.com/x` → `@x`), Evet/Hayır (`x`, `1`, `var`, `✓`) tek biçime getirilir.
+  Ülke, dil, dil seviyesi, medeni durum, öğretim türü, kayıt durumu, çalışma şekli sözlük ve eş anlamlılarla düzeltilir.
 
 ### Adım 3 — Aynı kişiye ait kayıtları bulma
 Benzer isim **tek başına yeterli değildir** (veride "Ahmet Yılmaz – Uludağ" ve "Ahmet Yılmaz – Hacettepe" iki farklı kişidir).
@@ -105,6 +127,7 @@ Karar kuralları:
 | Kimlik bilgisi yok: isim %90+ ve kurum aynı ve adres aynı | **kesin** |
 | Kimlik bilgisi yok: isim %85+ ve kurum ya da adres aynı, hiçbiri çelişmiyor | **kullanıcıya sor** |
 
+T.C. kimlik no da telefon/e-posta gibi kimlik bilgisi olarak kullanılır (aynıysa güçlü kanıt, farklıysa farklı kişi).
 E-postada sayılar farklıysa (`ali.can.1@` / `ali.can.2@`) farklı kişi kabul edilir. Kesin çiftler birleşim-bul
 (union-find) ile gruplara dönüştürülür.
 
@@ -155,8 +178,10 @@ tohumla çalıştırılır.
 | Sentetik - Ad ve Soyad ayrı sütunlarda | 418 | 0 (kesinlik %100.0) | %100.0 | %45.1 → **%98.9** | 63 | **%99.5** / %100.0 (0 yanlış) |
 | Sentetik - ek sütunlar (unvan, cinsiyet, serbest metin) | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 46 | **%99.6** / %100.0 (0 yanlış) |
 | Sentetik - gmail/hotmail adresleri + alan adı hataları | 418 | 0 (kesinlik %100.0) | %100.0 | %42.0 → **%99.1** | 46 | **%99.4** / %100.0 (0 yanlış) |
+| Sentetik - başlıklar anlamsız ("Sütun 1, Sütun 2…") | 418 | 0 (kesinlik %100.0) | %100.0 | %43.7 → **%99.4** | 46 | **%99.6** / %100.0 (0 yanlış) |
 | Sentetik - hepsi bir arada, ağır kirlilik | 382 | 0 (kesinlik %100.0) | %99.6 | %35.4 → **%98.0** | 88 | **%99.0** / %100.0 (0 yanlış) |
 
+- Kategori tanıma (58 kategori; başlıktan ve başlık anlamsızsa içerikten): 55 / 55 örnek doğru
 - Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
 - Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru
 
@@ -183,6 +208,9 @@ Bu tür değerler sarı ile işaretlenip kullanıcıya sorulur.
 | Aynı isimli farklı kişiler kullanıcıya hiç sorulmuyordu (kullanıcı geri bildirimi) | "Birleştireyim mi?" + "Hangisi doğru?" soruları | |
 | Grup içinde gerçekten farklı iki değer (iki üniversite) sessizce tek değere indiriliyordu | Yazım çeşidi / gerçek çelişki ayrımı, çelişkide sor | |
 | CSV okuyucu `12/11/1975`'i Amerikan tarihi sanıp 11 Aralık yaptı | CSV ham metin olarak okunur, tarih ayrıştırması bizde | |
+| "Üniversite" başlığının içindeki "site" yüzünden sütun Web sitesi sanıldı | Başlık kuralları kelime sınırıyla | CSV testi 0/5 → 5/5 |
+| "Ankara" değerleri "Ankara Üniversitesi" sanıldı; "Dil Seviyesi" → Yabancı dil | İçerik testlerinde şehir önce, kategori sırası düzeltildi | Tanıma 53/55 → 55/55 |
+| Başlıksız sütunlarda içerik tahmini her cevapta yeniden yapılıyordu (yavaş) | Tahmin dosya başına bir kez yapılıp saklanır | |
 
 ## Yapay zekâ araçlarının kullanımı
 
