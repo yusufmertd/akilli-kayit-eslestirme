@@ -6,11 +6,6 @@ Her türlü Excel ve CSV tablosundaki yazım hatalarını düzelten, aynı kayd�
 bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren ücretsiz web aracı. Müşteri, öğrenci, personel,
 ürün, adres, etkinlik listeleri… belirli bir sektöre ya da kesime özel değildir.
 
-```
-AHMET  YILMAZ │ ahmet.yilmaz@gma.il │ O555 100-0001  │ yeni mah bilim cad no 8 │ ist.
-        ↓
-Ahmet Yılmaz  │ ahmet.yilmaz@gmail.com │ 0555 100 00 01 │ Yeni Mahallesi, Bilim Caddesi No: 8 │ İstanbul
-```
 
 - **Kapsam:** 58 sütun kategorisi (ad soyad, e-posta, telefon, adres, şehir, tarih, kurum, şirket, bölüm, unvan, para,
   yüzde, IBAN, plaka…). Başlıktan ya da içerikten tanınır; tanınmayan sütunlara genel kurallar uygulanır.
@@ -217,9 +212,9 @@ tohumla çalıştırılır.
 
 | Test | Satır | Yanlış birleştirme | Bulunan eşleşme | Hücre doğruluğu: önce → sistem | Soru | Sorular cevaplanınca: hücre doğruluğu / bulunan eşleşme |
 |---|---|---|---|---|---|---|
-| Ham_Veri.xlsx – 1. Otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – 2. Ayıklama modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
-| Ham_Veri.xlsx – 3. Manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
+| Veri.xlsx – 1. Otomatik mod (hiç soru yok) | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 0 | **%100.0** / %100.0 (0 yanlış) |
+| Veri.xlsx – 2. Ayıklama modu | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 2 | **%100.0** / %100.0 (0 yanlış) |
+| Veri.xlsx – 3. Manuel mod | 96 | 0 (kesinlik %100.0) | %100.0 | %43.3 → **%100.0** | 34 | **%100.0** / %100.0 (0 yanlış) |
 | Sentetik - hafif kirlilik | 396 | 0 (kesinlik %100.0) | %100.0 | %60.4 → **%99.6** | 21 | **%99.6** / %100.0 (0 yanlış) |
 | Sentetik - orta kirlilik | 418 | 0 (kesinlik %100.0) | %100.0 | %44.2 → **%99.1** | 21 | **%99.1** / %100.0 (0 yanlış) |
 | Sentetik - ağır kirlilik | 405 | 0 (kesinlik %100.0) | %100.0 | %33.8 → **%97.6** | 18 | **%97.6** / %100.0 (0 yanlış) |
