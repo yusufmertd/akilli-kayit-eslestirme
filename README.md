@@ -22,7 +22,7 @@ bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren ücretsiz web
 
 ## Kullanım
 
-1. Excel veya CSV dosyasını sürükleyip bırakın ya da **örnek dosyayla deneyin**. Çok sayfalı Excel, üstünde
+1. Excel veya CSV dosyasını sürükleyip bırakın ya da **Dosya seç** ile seçin. Çok sayfalı Excel, üstünde
    başlık/açıklama satırı olan tablolar ve Türkçe Windows kodlamalı, `;` ayraçlı CSV'ler de okunur.
 2. Her sütunun türü **58 kategoriden** biri olarak tahmin edilir. Önce başlığa, başlık anlamsızsa ("Sütun 1") **içeriğe**
    bakılır. Başlığın üzerine gelince neden o türün seçildiği görünür (ör. *"değerlerde @ işareti var (%100)"*).
@@ -88,7 +88,7 @@ bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren ücretsiz web
 
 | | |
 |---|---|
-| ![Giriş](docs/ekranlar/1-giris.png) Giriş: 3 adım ve örnek dosyalar | ![Modlar](docs/ekranlar/2-eslesme-onay-modu.png) Mod seçici, açıklama balonu, sayfaya sığan tablo |
+| ![Giriş](docs/ekranlar/1-giris.png) Giriş: 3 adım ve dosya yükleme alanı | ![Modlar](docs/ekranlar/2-eslesme-onay-modu.png) Mod seçici, açıklama balonu, sayfaya sığan tablo |
 | ![Grup](docs/ekranlar/3-grup-birlestireyim-mi.png) "Abmet Dılmaz / Ahmet Yilmaz / Ahmet Yılmaz: birleştireyim mi?" | ![Aynı isim](docs/ekranlar/4-ayni-isim-farkli-kisi.png) Aynı isimde 2 farklı kişi |
 | ![Hangisi doğru](docs/ekranlar/5-hangisi-dogru.png) Birleştirince: hangi kurum doğru? | ![Hücre balonu](docs/ekranlar/6-hucre-balonu.png) Hücre balonu: eski hâli, gerekçe, düzeltme |
 | ![Gruplar](docs/ekranlar/7-gruplar-sekmesi.png) Gruplar sekmesi ve buton açıklaması | ![İçerikten tanıma](docs/ekranlar/8-icerikten-tur-tanima.png) Başlıksız dosyada türler içerikten tanındı |
@@ -249,8 +249,8 @@ gerçek kişi biçimi e-posta): **86 / 86 doğru**. Bu liste iki gizli hatayı d
 (harf hatası sanılıyordu; artık halk arasındaki adlar sözlüğünden doğru ile çevriliyor).
 
 **5. Tarayıcı testi (`tests/tarayici-testi.mjs`):** Uygulama gerçek bir tarayıcıda (Playwright + Chromium) baştan sona
-denenir: 37 kontrol, hepsi geçiyor. Kapsam: giriş ve sekmeler, ayarlar (tema sistem/açık/koyu, telefon biçimi, CSV ayırıcı,
-değişiklik raporu), e-postaların gerçek kişi biçiminde olması, örnek dosyalar, çok sayfalı Excel, Windows-1254 CSV, başlıksız dosyada içerikten tanıma, üç mod,
+denenir: 41 kontrol, hepsi geçiyor. Kapsam: giriş ve sekmeler, ayarlar (tema sistem/açık/koyu, telefon biçimi, CSV ayırıcı,
+değişiklik raporu), e-postaların gerçek kişi biçiminde olması, dosya yükleme, çok sayfalı Excel, Windows-1254 CSV, başlıksız dosyada içerikten tanıma, üç mod,
 soruyu cevaplama / atlama / geri alma, hücre balonuyla düzeltme ve geri alma, sütun türünü değiştirme, tekrarları tek satıra
 indirme, grubu ayırma, Excel ve CSV indirme, açıklama balonunun katmanı, 1366px ekranda tablonun yana kaydırmadan sığması,
 mobilde (390px) sayfanın taşmaması ve konsolda hata olmaması.
@@ -303,7 +303,7 @@ npm test         # doğruluk ölçümü (tests/SONUCLAR.md dosyasını da günce
 # tarayıcı testi: npm run build && npx vite preview --port 4179 (ayrı terminalde), sonra:
 npx -y playwright@1.48.2 install chromium && node tests/tarayici-testi.mjs
 npm run build    # yayın için derleme (dist/)
-node tests/make-sample.js   # arayüzde denemek için kirli örnek dosya üretir
+node tests/make-sample.js   # arayüzde denemek için ağır hatalı test dosyası üretir (tests/data)
 ```
 
 Vercel'de yayında: https://akilli-kayit-eslestirme.vercel.app (Vite, Build: `npm run build`, Çıktı: `dist`).

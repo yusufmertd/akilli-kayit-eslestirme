@@ -107,11 +107,6 @@ export default function App() {
     else downloadCsv(fileName, sheets[active], results[active], options[active], sheets.length > 1);
   }
 
-  async function trySample(name) {
-    const res = await fetch(`/ornek/${name}`);
-    handleFile(new File([await res.blob()], name));
-  }
-
   function reset() {
     setSheets([]);
     setDecisions([]);
@@ -128,12 +123,6 @@ export default function App() {
       <Page nav={nav}>
         <Steps />
         <Upload onFile={handleFile} error={error} />
-        <p className="samples">
-          Dosyanız yok mu? Örnekle deneyin:
-          <button className="link" data-tip="Yazım hatalı ve tekrar eden kayıtlar içeren 96 satırlık bir örnek yükler" onClick={() => trySample('Ham_Veri.xlsx')}>Örnek tablo</button>
-          <button className="link" data-tip="Çok sütunlu ve ağır yazım hataları olan zor bir örnek yükler" onClick={() => trySample('Zor_Ornek.xlsx')}>Zor örnek (ağır hatalar)</button>
-          <button className="link" data-tip="Sütun başlıkları 'Sütun 1, Sütun 2…' olan bir dosya: site her sütunun ne olduğunu içeriğinden tanır" onClick={() => trySample('Basliksiz_Ornek.xlsx')}>Başlıksız örnek (içerikten tanıma)</button>
-        </p>
       </Page>
     );
   }

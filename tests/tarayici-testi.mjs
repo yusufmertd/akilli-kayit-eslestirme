@@ -50,8 +50,10 @@ await page.click('.setting:has-text("CSV ayırıcısı") button:has-text("Noktal
 await page.locator('.setting:has-text("Değişiklikler") input').check();
 await page.click('.topnav >> text=Uygulama');
 
-// Örnek dosya
-await page.click('.samples >> text=Örnek tablo');
+// Dosya yükleme
+const veri = (ad) => new URL(`./data/${ad}`, import.meta.url).pathname;
+check('Örnek dosya bağlantıları kaldırıldı', (await page.locator('.samples').count()) === 0);
+await page.setInputFiles('input[type=file]', veri('Ham_Veri.xlsx'));
 await page.waitForSelector('.result');
 check('Örnek dosya yüklendi', (await page.locator('.result tbody tr').count()) === 96);
 const emailTexts = await page.locator('.result tbody tr td:nth-child(6)').allInnerTexts();
@@ -135,17 +137,17 @@ fs.writeFileSync(`${S}/t-xlsx-path.txt`, x.path);
 
 // Başlıksız ve zor örnek, CSV yükleme
 await page.click('.toolbar >> text=Yeni dosya');
-await page.click('text=Başlıksız örnek');
+await page.setInputFiles('input[type=file]', veri('Basliksiz_Ornek.xlsx'));
 await page.waitForSelector('.result');
 check('Başlıksız örnek: içerikten tanıma', (await page.locator('th select').evaluateAll((s) => s.map((x) => x.value))).join(',') === 'name,email,phone,address,institution,department,city,tc,gender,date,gpa,blood,money,boolean');
 await page.click('.toolbar >> text=Yeni dosya');
-await page.setInputFiles('input[type=file]', new URL('./data/Windows1254_noktali_virgul.csv', import.meta.url).pathname);
+await page.setInputFiles('input[type=file]', veri('Windows1254_noktali_virgul.csv'));
 await page.waitForSelector('.result');
 check('Windows-1254 CSV yükleme', (await page.locator('.result tbody tr').first().innerText()).includes('Orta Doğu Teknik Üniversitesi'));
 await page.click('.toolbar >> text=Yeni dosya');
-await page.click('text=Zor örnek');
+await page.setInputFiles('input[type=file]', veri('Sentetik_Agir_Kirli.xlsx'));
 await page.waitForSelector('.result');
-check('Zor örnek yüklendi', (await page.locator('.result tbody tr').count()) === 73, (await page.locator('.intro').innerText()).slice(0, 120));
+check('Ağır hatalı dosya yüklendi', (await page.locator('.result tbody tr').count()) === 73, (await page.locator('.intro').innerText()).slice(0, 120));
 
 // Koyu tema ekran görüntüsü + mobil
 await page.emulateMedia({ colorScheme: 'dark' });

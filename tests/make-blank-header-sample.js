@@ -15,6 +15,5 @@ const rows = [
 const headers = rows[0].map((_, c) => `Sütun ${c + 1}`);
 const wb = XLSX.utils.book_new();
 XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([headers, ...rows]), 'Basliksiz');
-XLSX.writeFile(wb, new URL('../public/ornek/Basliksiz_Ornek.xlsx', import.meta.url).pathname);
 XLSX.writeFile(wb, new URL('./data/Basliksiz_Ornek.xlsx', import.meta.url).pathname);
 console.log('yazıldı');

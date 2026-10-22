@@ -121,7 +121,6 @@ button.link { background: none; color: var(--link); padding: 4px 6px; text-decor
 .steps li::before { content: counter(step); position: absolute; left: 14px; top: 14px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-text); display: grid; place-items: center; font-weight: 600; font-size: 0.9rem; }
 .steps b { display: block; }
 .steps span { color: var(--muted); font-size: 0.88rem; }
-.samples { margin-top: 12px; color: var(--muted); font-size: 0.9rem; text-align: center; }
 
 /* Asistan baloncuğu */
 .assistant { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
