@@ -226,7 +226,6 @@ function Page({ nav, children }) {
       {children}
       <footer className="footer muted small">
         Tüm işlemler tarayıcınızda yapılır; dosyanız hiçbir sunucuya gönderilmez ve kaydedilmez.
-        {' · '}<a href="https://github.com/yusufmertd/akilli-kayit-eslestirme" target="_blank" rel="noreferrer">Kaynak kod (GitHub)</a>
       </footer>
     </main>
   );
