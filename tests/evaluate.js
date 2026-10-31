@@ -192,6 +192,26 @@ async function evalCsvFixture() {
   return got.filter((g, i) => g === expected[i]).length + ' / ' + expected.length + ' satır doğru';
 }
 
+// Kullanıcıdan gelen akademik/sağlık dosyası: aynı kişi kısaltılmış kurumla (ÇU / Çukurova) ve
+// e-postası "ref" ekli/eksik yazılmış; IBAN'lar karışık biçimde (bazısı boşluklu, bazısı değil)
+async function evalAcademicFixture() {
+  const [sheet] = await readFile(new File([fs.readFileSync(`${dir}data/Akademik_Saglik.xlsx`)], 'test.xlsx'));
+  const res = processTable(sheet.headers, sheet.rows, { mode: 'suspicious', format: { humanEmail: true } });
+  const col = (type) => res.types.indexOf(type);
+  const names = res.cells.map((row) => row[col('name')].value);
+  const groupNames = new Map();
+  res.groupOf.forEach((g, r) => groupNames.set(g, names[r]));
+  const distinctNames = new Set(names).size;
+  const checks = [
+    [`her ad tek kişi (${distinctNames} kişi)`, new Set(groupNames.values()).size === groupNames.size && groupNames.size === distinctNames],
+    ['Selin Aydın (ÇU / Çukurova) tek kişi', new Set(names.flatMap((n, r) => (n === 'Selin Aydın' ? [res.groupOf[r]] : []))).size === 1],
+    ['IBAN\'lar tek biçimde (boşluksuz)', res.cells.every((row) => /^TR\d{24}$/.test(row[col('iban')].value))],
+    ['soru yok (Ayıklama modu)', res.questions.length === 0],
+  ];
+  const failed = checks.filter(([, ok]) => !ok).map(([n]) => n);
+  return `${checks.length - failed.length} / ${checks.length} kontrol doğru${failed.length ? ` (hatalı: ${failed.join(', ')})` : ''}`;
+}
+
 const results = [
   evalSample('auto'),
   evalSample('suspicious'),
@@ -221,11 +241,12 @@ for (const r of results) {
 }
 const headerOk = evalHeaderDetection();
 const csvOk = await evalCsvFixture();
+const academicOk = await evalAcademicFixture();
 const det = evalDetection();
 const typos = runTypoCases();
 if (typos.wrong.length) console.log('Yazım hatası testi hataları:', typos.wrong);
 if (det.wrong.length) console.log('Kategori tanıma hataları:', det.wrong);
-const table = `${lines.join('\n')}\n\n- Yaygın yazım hataları (tests/yazim-hatalari.js; e-posta, telefon, tarih, şehir, ad, üniversite, bölüm, fakülte, unvan, adres): ${typos.ok} / ${typos.total} örnek doğru\n- Kategori tanıma (${CATEGORIES.length} kategori; başlıktan ve başlık anlamsızsa içerikten): ${det.ok} / ${det.total} örnek doğru\n- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): ${headerOk ? 'tüm örnekler doğru' : 'HATALI'}\n- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (\`tests/data/Windows1254_noktali_virgul.csv\`): ${csvOk}`;
+const table = `${lines.join('\n')}\n\n- Yaygın yazım hataları (tests/yazim-hatalari.js; e-posta, telefon, tarih, şehir, ad, üniversite, bölüm, fakülte, unvan, adres): ${typos.ok} / ${typos.total} örnek doğru\n- Kategori tanıma (${CATEGORIES.length} kategori; başlıktan ve başlık anlamsızsa içerikten): ${det.ok} / ${det.total} örnek doğru\n- Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): ${headerOk ? 'tüm örnekler doğru' : 'HATALI'}\n- Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (\`tests/data/Windows1254_noktali_virgul.csv\`): ${csvOk}\n- Akademik/sağlık personeli dosyası (TC, IBAN, kan grubu, unvan; \`tests/data/Akademik_Saglik.xlsx\`): ${academicOk}`;
 console.log(table);
 
 if (process.argv.includes('--hatalar')) {

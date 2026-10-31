@@ -7,6 +7,7 @@
 // Telefon / e-posta gibi kimlik bilgileri eşleşirse güçlü kanıt, çelişirse güçlü karşı kanıttır.
 
 import { fold, similarity, isEmpty } from './text.js';
+import { humanizeEmail } from './fields.js';
 
 // İsim benzerliği; "Yılmaz Ahmet" ile "Ahmet Yılmaz" da yakalanır.
 function nameSimilarity(a, b) {
@@ -19,11 +20,16 @@ function nameSimilarity(a, b) {
 // E-postanın kullanıcı kısmı noktasız: "can.ozdemir.ege@x" -> "canozdemirege"
 const emailKey = (e) => fold(String(e).split('@')[0]).replace(/[^a-z0-9]/g, '');
 const emailDigits = (e) => emailKey(e).replace(/\D/g, '');
+const humanKey = (e) => emailKey(humanizeEmail(String(e).trim().toLowerCase()));
 
-// E-posta benzerliği. İçindeki sayılar farklıysa (ali.can.1 / ali.can.2) farklı kişi kabul edilir.
+// E-posta benzerliği. İkisinde de sayı varsa ve farklıysa (ali.can.1 / ali.can.2) farklı kişi kabul edilir.
+// Sadece birinde sayı varsa teknik ek atılarak karşılaştırılır: "selin.aydin.ref08@" ile "selin.aydin@" aynı kişi.
 function emailSimilarity(a, b) {
-  if (emailDigits(a) !== emailDigits(b)) return 0;
-  return similarity(emailKey(a), emailKey(b));
+  const da = emailDigits(a);
+  const db = emailDigits(b);
+  if (da === db) return similarity(emailKey(a), emailKey(b));
+  if (da && db) return 0;
+  return similarity(humanKey(a), humanKey(b));
 }
 
 export function compareRecords(a, b) {
@@ -42,12 +48,15 @@ export function compareRecords(a, b) {
   const phoneConflict = differs('phone');
   const tcMatch = same('tc'); // T.C. kimlik no: en güçlü kimlik bilgisi
   const tcConflict = differs('tc');
+  // IBAN aynıysa güçlü kanıttır; farklı olması çelişki sayılmaz (bir kişinin birden fazla hesabı olabilir, yazım hatası olabilir)
+  const ibanMatch = same('iban');
   const emailSim = both('email') ? emailSimilarity(a.email, b.email) : null;
   const emailMatch = emailSim !== null && emailSim >= 0.9;
   const emailConflict = emailSim !== null && emailSim < 0.8;
 
   if (tcMatch) reasons.push('T.C. kimlik no aynı');
   if (tcConflict) reasons.push('T.C. kimlik no farklı');
+  if (ibanMatch) reasons.push('IBAN aynı');
   if (phoneMatch) reasons.push('telefon aynı');
   if (phoneConflict) reasons.push('telefon farklı');
   if (emailMatch) reasons.push(emailSim === 1 ? 'e-posta aynı' : 'e-posta neredeyse aynı');
@@ -58,7 +67,7 @@ export function compareRecords(a, b) {
   if (differs('address')) reasons.push('adres farklı');
   if (same('department')) reasons.push('bölüm aynı');
 
-  const idMatch = phoneMatch || emailMatch || tcMatch;
+  const idMatch = phoneMatch || emailMatch || tcMatch || ibanMatch;
   const conflict = phoneConflict || emailConflict || tcConflict;
 
   // 0-100 arası güven puanı (yalnızca kullanıcıya göstermek için)
@@ -66,6 +75,7 @@ export function compareRecords(a, b) {
   if (phoneMatch) score += 30;
   if (emailMatch) score += 30;
   if (tcMatch) score += 40;
+  if (ibanMatch) score += 30;
   if (same('institution')) score += 10;
   if (same('address')) score += 15;
   if (same('department')) score += 5;

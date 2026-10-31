@@ -15,7 +15,7 @@
 //            auto       : hiç soru yok, tüm kararları algoritma verir
 //            suspicious : sadece belirsiz eşleşmeler sorulur (aynı isimli kişiler, şüpheli çiftler)
 //            manual     : her eşleşme, her çelişki ve emin olunamayan her yazım sorulur
-//   format:  { phone: 'spaced'|'plain'|'intl', date: 'dmy'|'iso'|'slash', humanEmail: bool } -> çıktı biçimi (Ayarlar)
+//   format:  { phone: 'spaced'|'plain'|'intl', date: 'dmy'|'iso'|'slash', iban: 'compact'|'spaced', humanEmail: bool } -> çıktı biçimi (Ayarlar)
 //   review:  'all' | undefined                      -> manuel modda "kalan eşleşmelerin hepsini onayla" dendi mi?
 //   groups:  { "0,11,58": true | false }            -> otomatik bulunan grup onaylandı mı / reddedildi mi?
 
@@ -78,7 +78,7 @@ export function processTable(headers, rows, decisions = {}) {
   const fullName = (cellsOfRow) => nameCols.map((c) => cellsOfRow[c]?.value).filter(Boolean).join(' ');
   const records = cleaned.map((r) => {
     const rec = { name: fullName(r) };
-    for (const type of ['email', 'phone', 'tc', 'institution', 'department', 'address', 'city']) {
+    for (const type of ['email', 'phone', 'tc', 'iban', 'institution', 'department', 'address', 'city']) {
       const c = colsOf(type)[0];
       rec[type] = c === undefined ? '' : r[c]?.value ?? '';
     }
@@ -229,7 +229,9 @@ export function processTable(headers, rows, decisions = {}) {
   // Çıktı biçimi (Ayarlar): telefon ve tarihler kullanıcının seçtiği biçime getirilir
   const DATE_TYPES = ['date', 'birthdate', 'regDate', 'startDate'];
   types.forEach((t, col) => {
-    const fmt = t === 'phone' ? (v) => formatPhone(v, decisions.format?.phone) : DATE_TYPES.includes(t) ? (v) => formatDate(v, decisions.format?.date) : null;
+    const fmt = t === 'phone' ? (v) => formatPhone(v, decisions.format?.phone)
+      : t === 'iban' ? (v) => formatIban(v, decisions.format?.iban)
+      : DATE_TYPES.includes(t) ? (v) => formatDate(v, decisions.format?.date) : null;
     if (fmt) final.forEach((row) => { if (row[col]) row[col] = { ...row[col], value: fmt(row[col].value) }; });
   });
 
@@ -342,6 +344,12 @@ export function collapseRows(result, rawRows) {
 // ---------- Yardımcılar ----------
 
 // "0555 100 00 01" -> "05551000001" / "+90 555 100 00 01"
+// IBAN: "TR330006100519786457841326" (boşluksuz, varsayılan) ya da "TR33 0006 1005 1978 6457 8413 26"
+function formatIban(v, fmt) {
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]+$/.test(v)) return v;
+  return fmt === 'spaced' ? v.match(/.{1,4}/g).join(' ') : v;
+}
+
 function formatPhone(v, fmt) {
   const m = v.match(/^0(\d{3}) (\d{3}) (\d{2}) (\d{2})$/);
   if (!m || !fmt || fmt === 'spaced') return v;
@@ -383,7 +391,7 @@ function summarize(group, cellsByRow, types) {
 // ("Ahmet Yılmaz" ~ "Abmet Dılmaz" aynı küme; "Uludağ Üniversitesi" ile "Hacettepe Üniversitesi" ayrı kümeler)
 function clusterVariants(cands, type) {
   const same = (a, b) => {
-    if (['phone', 'birthdate', 'tc', 'postal'].includes(type)) return a.value === b.value;
+    if (['phone', 'birthdate', 'tc', 'postal', 'iban'].includes(type)) return a.value === b.value;
     if (type === 'email') return sameEmail(a.value, b.value);
     // Adreste kapı numarası farklıysa (No: 8 / No: 87) aynı adres değildir
     if (type === 'address' && a.value.replace(/\D/g, '') !== b.value.replace(/\D/g, '')) return false;

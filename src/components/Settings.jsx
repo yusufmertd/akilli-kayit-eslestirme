@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS = {
   csvSep: ',', // CSV ayırıcı
   phoneFormat: 'spaced', // 0555 100 00 01
   dateFormat: 'dmy', // 05.03.1998
+  ibanFormat: 'compact', // TR330006100519786457841326
   humanEmail: true, // e-postalardaki teknik ekleri (ref27, test, +etiket) kaldır
   wrap: true, // uzun metinler hücrede alt satıra geçsin (tablo sayfaya sığar)
   density: 'normal', // 'normal' | 'compact'
@@ -31,6 +32,7 @@ const GROUPS = [
   ['Biçimler', [
     ['phoneFormat', 'Telefon biçimi', 'Tüm telefon numaraları bu biçime getirilir', [['spaced', '0555 100 00 01'], ['plain', '05551000001'], ['intl', '+90 555 100 00 01']]],
     ['dateFormat', 'Tarih biçimi', 'Tüm tarih sütunları bu biçime getirilir', [['dmy', '05.03.1998'], ['iso', '1998-03-05'], ['slash', '05/03/1998']]],
+    ['ibanFormat', 'IBAN biçimi', 'Tüm IBAN\'lar bu biçime getirilir', [['compact', 'Boşluksuz (TR3300...)'], ['spaced', '4\'lü gruplu (TR33 0006 ...)']]],
     ['humanEmail', 'E-postaları gerçek adres biçimine getir', 'Teknik/sistem ekleri kaldırılır: ece.demirci.ref27@… → ece.demirci@…, ali+bulten@… → ali@…, test.zeynep@… → zeynep@…', 'bool'],
   ]],
   ['İndirme', [

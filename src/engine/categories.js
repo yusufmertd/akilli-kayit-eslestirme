@@ -78,10 +78,12 @@ function validIban(iban) {
   const numeric = moved.replace(/[A-Z]/g, (ch) => String(ch.charCodeAt(0) - 55));
   return BigInt(numeric) % 97n === 1n;
 }
+// Biçimi doğru her IBAN aynı biçime getirilir (boşluklar daha sonra Ayarlar'a göre eklenir).
+// Kontrol hanesi tutmayan IBAN da biçimlenir, hücre notunda belirtilir.
 const cleanIban = (raw) => {
   const s = String(raw).toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s) || !validIban(s)) return result(squeeze(raw), false, false, 'IBAN doğrulanamadı');
-  return result(s.match(/.{1,4}/g).join(' '), true);
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s) || (s.startsWith('TR') && s.length !== 26)) return result(squeeze(raw), false, false, 'IBAN biçimi tanınmadı');
+  return result(s, true, true, validIban(s) ? '' : 'IBAN kontrol hanesi tutmuyor');
 };
 
 // Araç plakası: "34abc123" -> "34 ABC 123"
@@ -278,8 +280,8 @@ export const CATEGORIES = [
   // --- Genel biçimler (içerikten tanınır)
   C('id', 'Kimlik / No', 'Genel', 'Kayıt numarası, sicil no; değiştirilmez', {
     header: /(^|_)(id|no|kod|numara|numarasi)$|sira|sicil|kimlik/, clean: keepAsIs }),
-  C('iban', 'IBAN', 'Genel', '"TR33 0006 1005 ..." biçimi; kontrol hanesi doğrulanır', {
-    header: /iban/, test: (v) => /^TR\s?\d{2}[\d\s]{20,}$/i.test(v), min: 0.6, why: 'değerler TR ile başlayan IBAN', clean: cleanIban }),
+  C('iban', 'IBAN', 'Genel', 'Tek biçime getirilir (Ayarlar: boşluksuz ya da 4\'lü gruplu); kontrol hanesi doğrulanır', {
+    header: /iban/, test: (v) => /^TR\s?\d{2}[\d\s]{20,}$/i.test(v), min: 0.6, why: 'değerler TR ile başlayan IBAN', clean: cleanIban, person: true }),
   C('plate', 'Araç plakası', 'Genel', '"34 ABC 123" biçimi', { header: /plaka/, test: (v) => PLATE.test(v), min: 0.7, why: 'değerler araç plakası', clean: cleanPlate }),
   C('date', 'Tarih (genel)', 'Genel', 'Gün.ay.yıl biçimi', {
     header: /tarih|date/, test: (v) => /^\d{1,2}[./-]\d{1,2}[./-]\d{2,4}$|^\d{4}-\d{2}-\d{2}/.test(v), min: 0.6, why: 'değerler tarih', clean: cleanDate }),

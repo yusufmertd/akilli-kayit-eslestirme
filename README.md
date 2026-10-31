@@ -77,7 +77,7 @@ bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren ücretsiz web
    - **Tablo:** yoğunluk (rahat/sıkı), uzun metinleri alt satıra kaydırma (tablo sayfaya sığar), renklendirme, açıklama balonları
    - **Eşleştirme:** yeni dosyalar için varsayılan mod, tekrarları varsayılan olarak tek satıra indirme
    - **Biçimler:** telefon (`0555 100 00 01` / `05551000001` / `+90 555 100 00 01`), tarih (`05.03.1998` / `1998-03-05` / `05/03/1998`),
-     e-postaları gerçek kişi biçimine getirme
+     IBAN (boşluksuz `TR3300...` / 4'lü gruplu `TR33 0006 ...`), e-postaları gerçek kişi biçimine getirme
    - **İndirme:** CSV ayırıcısı (virgül / Türkçe Excel için noktalı virgül), grup no sütunu, Excel'e **"Değişiklikler"** sayfası
      (hangi hücre, eski değer, yeni değer, neden)
    "Nasıl çalışır?" sekmesi yöntemi kullanıcıya kısaca anlatır.
@@ -149,7 +149,7 @@ karşılaştırmayı bozmaz. (Türkçe'ye özgü `I/ı`, `İ/i` dönüşümleri 
   yazıma indirilir; sözlükte olmayan değerler sütundaki çok benzer (%88+) daha sık bir değere çekilir; dosyanın başka
   yerinde Türkçe karakterle yazılmış kelimeler düzeltilir; çoğunluk normal yazılmışsa TAMAMI BÜYÜK değerler düzeltilir.
   Kimlik, sayı (yaş, not, puan) sütunlarına dokunulmaz.
-- **Biçim kategorileri:** T.C. kimlik no ve IBAN kontrol hanesiyle doğrulanır; para (`1250 tl` → `1.250 TL`), yüzde,
+- **Biçim kategorileri:** T.C. kimlik no ve IBAN kontrol hanesiyle doğrulanır (IBAN'lar her durumda tek biçime getirilir, kontrol hanesi tutmayanlar hücre notunda belirtilir); para (`1250 tl` → `1.250 TL`), yüzde,
   not ortalaması (`3.456` → `3,46`), kan grubu (`a rh+` → `A Rh+`), sınıf (`birinci sınıf` → `1. Sınıf`), saat, plaka,
   web adresi, sosyal medya (`instagram.com/x` → `@x`), Evet/Hayır (`x`, `1`, `var`, `✓`) tek biçime getirilir.
   Ülke, dil, dil seviyesi, medeni durum, öğretim türü, kayıt durumu, çalışma şekli sözlük ve eş anlamlılarla düzeltilir.
@@ -168,6 +168,8 @@ Karar kuralları:
 | Kimlik bilgisi yok: isim %85+ ve kurum ya da adres aynı, hiçbiri çelişmiyor | **kullanıcıya sor** |
 
 T.C. kimlik no da telefon/e-posta gibi kimlik bilgisi olarak kullanılır (aynıysa güçlü kanıt, farklıysa farklı kişi).
+IBAN aynıysa güçlü kanıttır; farklı olması çelişki sayılmaz (bir kişinin birden fazla hesabı olabilir, IBAN'da yazım hatası olabilir).
+E-postada sadece birinde teknik ek varsa (`selin.aydin.ref08@` / `selin.aydin@`) ek atılarak karşılaştırılır; ikisinde de farklı sayılar varsa farklı kişi sayılır.
 E-postada sayılar farklıysa (`ali.can.1@` / `ali.can.2@`) farklı kişi kabul edilir. Kesin çiftler birleşim-bul
 (union-find) ile gruplara dönüştürülür.
 

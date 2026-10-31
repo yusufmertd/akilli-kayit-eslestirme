@@ -30,3 +30,4 @@ Sentetik testler varsayılan **"2. Ayıklama"** modunda ölçülür.
 - Kategori tanıma (58 kategori; başlıktan ve başlık anlamsızsa içerikten): 55 / 55 örnek doğru
 - Başlık satırı tespiti (üstte açıklama satırları olan dosyalar): tüm örnekler doğru
 - Windows-1254 kodlu, ";" ayraçlı, başlığı 3. satırda, Ad/Soyad ayrı CSV (`tests/data/Windows1254_noktali_virgul.csv`): 5 / 5 satır doğru
+- Akademik/sağlık personeli dosyası (TC, IBAN, kan grubu, unvan; `tests/data/Akademik_Saglik.xlsx`): 4 / 4 kontrol doğru
