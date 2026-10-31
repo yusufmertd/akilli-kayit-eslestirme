@@ -10,7 +10,7 @@ bulan ve temizlenmiş tabloyu **.xlsx** veya **.csv** olarak veren ücretsiz web
 - **Kapsam:** 58 sütun kategorisi (ad soyad, e-posta, telefon, adres, şehir, tarih, kurum, şirket, bölüm, unvan, para,
   yüzde, IBAN, plaka…). Başlıktan ya da içerikten tanınır; tanınmayan sütunlara genel kurallar uygulanır.
   Türkçe sözlükler (81 il, yaygın adlar, kurum ve üniversite adları, unvanlar, ülkeler, diller) yerleşik gelir.
-- **Teknoloji:** React + Vite, JavaScript, Excel okuma/yazma için SheetJS
+- **Teknoloji:** React + Vite, JavaScript, Excel/CSV okuma ve CSV yazma için SheetJS, biçimli Excel çıktısı (kalın başlık, filtreli tablo, otomatik sütun genişliği, sabit başlık satırı) için ExcelJS
 - **Gizlilik:** Dosya tarayıcıdan hiç çıkmaz. Sunucu yok, veritabanı yok, `localStorage` yok.
   Dosya yalnızca sayfanın belleğinde işlenir; sayfa kapanınca hiçbir iz kalmaz.
 - **Kullanıcı merkezli:** Emin olamadığı konuları bir **asistan balonunda** sorar ("Bunlar aynı kayıt mı?",

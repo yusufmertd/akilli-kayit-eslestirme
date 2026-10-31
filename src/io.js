@@ -44,7 +44,7 @@ export function tableFor(sheet, result, { dedupe = false, withGroup = false } = 
   const body = dedupe
     ? collapseRows(result, sheet.rows)
     : result.cells.map((row, r) => ({ row: r, values: row.map((cell, c) => (cell.status === 'same' ? sheet.rows[r][c] : cell.value)) }));
-  const headers = withGroup ? [...sheet.headers, 'Eslesme_Grubu'] : sheet.headers;
+  const headers = withGroup ? [...sheet.headers, 'Eşleşme Grubu'] : sheet.headers;
   return [headers, ...body.map(({ row, values }) => (withGroup ? [...values, groupNo.get(row) ?? ''] : values))];
 }
 
@@ -59,26 +59,98 @@ function changeReport(sheet, result) {
   return rows;
 }
 
-export function downloadXlsx(fileName, sheets, results, options) {
-  const wb = XLSX.utils.book_new();
+// Excel çıktısı: düzgün biçimli, filtrelenebilir bir Excel tablosu (kalın başlık, sütun genişlikleri, sabit başlık satırı).
+// ExcelJS büyük bir kütüphane olduğu için sadece indirme anında yüklenir.
+export async function downloadXlsx(fileName, sheets, results, options) {
+  const { default: ExcelJS } = await import('exceljs');
+  const wb = new ExcelJS.Workbook();
+  const used = new Set();
   sheets.forEach((sheet, i) => {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tableFor(sheet, results[i], options[i])), sheet.name.slice(0, 31));
+    const [headers, ...rows] = tableFor(sheet, results[i], options[i]);
+    addTable(wb, sheetName(sheet.name, used), headers, rows.map((row) => row.map(excelValue)));
   });
   if (options.some((o) => o.report)) {
     const report = sheets.flatMap((sheet, i) => (options[i].report ? changeReport(sheet, results[i]).slice(i === 0 ? 0 : 1) : []));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(report), 'Degisiklikler');
+    if (report.length > 1) addTable(wb, sheetName('Değişiklikler', used), report[0], report.slice(1));
   }
-  XLSX.writeFile(wb, `${baseName(fileName)}_temiz.xlsx`);
+  const buffer = await wb.xlsx.writeBuffer();
+  saveBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${baseName(fileName)}_temiz.xlsx`);
+}
+
+// Uzun rakam dizileri (TC, telefon, IBAN) metin olarak yazılır; yoksa Excel 1,23E+10 gösterir
+function excelValue(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'number' && Number.isInteger(v) && Math.abs(v) >= 1e9) return String(v);
+  return v;
+}
+
+// Excel sayfa adı: en fazla 31 karakter, : \ / ? * [ ] olmadan ve benzersiz
+function sheetName(name, used) {
+  const base = String(name).replace(/[:\\/?*[\]]/g, ' ').trim().slice(0, 28) || 'Sayfa';
+  let result = base;
+  for (let n = 2; used.has(result.toLocaleLowerCase('tr-TR')); n++) result = `${base} ${n}`;
+  used.add(result.toLocaleLowerCase('tr-TR'));
+  return result;
+}
+
+const textWidth = (v) => Math.max(...String(v ?? '').split('\n').map((line) => line.length));
+
+function addTable(wb, name, headers, rows) {
+  const ws = wb.addWorksheet(name, {
+    views: [{ state: 'frozen', ySplit: 1 }], // başlık satırı kaydırınca hep görünür
+    pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 },
+  });
+  // Excel tablosunda başlıklar benzersiz ve dolu olmalı
+  const seen = new Map();
+  const names = headers.map((h, c) => {
+    const base = String(h ?? '').trim() || `Sütun ${c + 1}`;
+    const n = (seen.get(base) || 0) + 1;
+    seen.set(base, n);
+    return n > 1 ? `${base} (${n})` : base;
+  });
+  ws.addTable({
+    name: `Tablo${wb.worksheets.length}`,
+    ref: 'A1',
+    headerRow: true,
+    style: { theme: 'TableStyleMedium2', showRowStripes: true }, // filtre düğmeleri ve sıralamada bozulmayan satır çizgileri
+    columns: names.map((n) => ({ name: n, filterButton: true })),
+    rows: rows.length ? rows : [names.map(() => '')],
+  });
+
+  // Sütun genişliği içeriğe göre; çok uzun metinler hücre içinde alt satıra geçer
+  names.forEach((n, c) => {
+    const longest = Math.max(textWidth(n) + 3, ...rows.slice(0, 2000).map((r) => textWidth(r[c])));
+    const col = ws.getColumn(c + 1);
+    col.width = Math.min(Math.max(longest + 2, 8), 60);
+    col.alignment = { vertical: 'top', wrapText: longest > 60 };
+  });
+  // Biçimler hücrelere ayrıca yazılır: LibreOffice ve Google E-Tablolar Excel tablo stillerini göstermez
+  const line = { style: 'thin', color: { argb: 'FFD0D7E5' } };
+  ws.eachRow((row, r) => {
+    for (let c = 1; c <= names.length; c++) {
+      const cell = row.getCell(c);
+      cell.border = { top: line, left: line, bottom: line, right: line };
+      if (r === 1) {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2F5BD3' } };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      }
+    }
+  });
+  ws.getRow(1).height = 22;
+}
+
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadCsv(fileName, sheet, result, options, multiSheet) {
   const csv = XLSX.utils.sheet_to_csv(XLSX.utils.aoa_to_sheet(tableFor(sheet, result, options)), { FS: options.sep || ',' });
   // Başa BOM eklenir ki Excel Türkçe karakterleri doğru göstersin
-  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${baseName(fileName)}${multiSheet ? `_${sheet.name}` : ''}_temiz.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
+  saveBlob(new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' }), `${baseName(fileName)}${multiSheet ? `_${sheet.name}` : ''}_temiz.csv`);
 }
